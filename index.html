@@ -47,7 +47,7 @@ function setScore(el,val){
  el.dataset.busy="1";
  flash.getAnimations().forEach(a=>a.cancel());
  if(mark) mark.getAnimations().forEach(a=>a.cancel());
- flash.style.display="flex";
+ flash.style.display="none";
  flash.style.opacity="1";
  if(curtain){
    curtain.style.display="block";
@@ -59,7 +59,7 @@ function setScore(el,val){
      {offset:.82,clipPath:"polygon(8% 0,100% 0,100% 100%,0 100%,0 8%,5% 12%)"},
      {offset:1,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
    ],{duration:175,easing:"cubic-bezier(.18,.72,.2,1)",fill:"forwards"});
-   sheet.onfinish=()=>{curtain.style.display="none"};
+   sheet.onfinish=()=>{};
  }
 
  // BEAT 1: very fast diagonal rip/tornado into the score box.
@@ -71,22 +71,19 @@ function setScore(el,val){
    {offset:1,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"}
  ],{duration:175,easing:"cubic-bezier(.12,.75,.18,1)",fill:"forwards"});
 
-
- if(mark){
-   mark.animate([
-     {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(9deg) rotateY(-12deg) scale(.72)"},
-     {offset:.42,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(7deg) rotateY(-9deg) scale(.84)"},
-     {offset:.72,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(4deg) rotateY(-5deg) scale(.98)"},
-     {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"}
-   ],{duration:175,easing:"cubic-bezier(.12,.7,.2,1)",fill:"forwards"});
- }
  tearIn.onfinish=()=>{
-   // Old score is now completely hidden.
+   // Rake/erase is complete. Hold a completely clean white score box first.
    cur.textContent=next;
-
-   // Continue the same forward motion immediately—no visible small-logo pause.
-   if(mark){
-     mark.animate([
+   if(curtain){
+     curtain.style.background="#fff";
+     curtain.style.clipPath="inset(0)";
+   }
+   setTimeout(()=>{
+     // Only after the white beat does the logo appear.
+     flash.style.display="flex";
+     if(curtain) curtain.style.display="none";
+     if(mark){
+       mark.animate([
        {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"},
        {offset:.58,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.18)"},
        {offset:.82,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-1deg) rotateY(1deg) scale(1.22)"},
@@ -118,6 +115,7 @@ function setScore(el,val){
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
    },390);
+   },110);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
