@@ -11,7 +11,7 @@
 .name{font-size:24px;font-weight:900;letter-spacing:.35px}
 .record{font-size:16px;font-weight:800;margin-top:7px;opacity:.96}
 .score{position:relative;overflow:hidden!important;isolation:isolate;height:88px;width:92px;display:flex;align-items:center;justify-content:center;font-size:54px;font-weight:900;font-variant-numeric:tabular-nums}
-.home .info{background:var(--heartland);color:#fff}.home .score{background:#15117F;color:#fff;border-left:1px solid rgba(255,255,255,.28);box-shadow:inset 7px 0 12px rgba(0,0,0,.055)}.home .info{border-radius:3px 0 0 3px;align-items:flex-end}.home .top{justify-content:flex-end}
+.home .info{background:var(--heartland);color:#fff}.home .score{background:var(--heartland)!important;color:#fff;border-left:1px solid rgba(255,255,255,.28);box-shadow:none}.home .info{border-radius:3px 0 0 3px;align-items:flex-end}.home .top{justify-content:flex-end}
 .away .info{background:var(--white);color:var(--plaza)}.away .score{background:#E9EAEB;color:var(--plaza);border-right:1px solid rgba(90,90,90,.22);box-shadow:inset -7px 0 12px rgba(0,0,0,.025)}.away .info{border-radius:0 3px 3px 0;align-items:flex-start}
 .center{height:88px;width:128px;background:var(--black);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .clock{font-size:31px;line-height:32px;font-weight:900;font-variant-numeric:tabular-nums}.period{font-size:18px;font-weight:900;margin-top:7px}
@@ -19,7 +19,7 @@
 .score .score-current,.score .score-old{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}.score .score-old{opacity:0;pointer-events:none}.score.cross .score-current{animation:newScore .65s ease-in-out both}.score.cross .score-old{animation:oldScore .65s ease-in-out both}
 @keyframes oldScore{0%{opacity:1;transform:scale(1)}45%{opacity:.45;transform:scale(.985)}100%{opacity:0;transform:scale(.97)}}
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}
-.score-flash{position:absolute;inset:0;width:100%;height:100%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1}
+.home .score,.home #homeScore{background:#0A0674!important;}\n.score-flash{position:absolute;inset:0;width:100%;height:100%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1}
 .score-flash .hcs-logo{display:block;width:78px;height:78px;max-width:78px;max-height:78px;object-fit:contain;opacity:1}
 .score-flash .phmark{display:block;font-size:48px;line-height:1;font-weight:900;color:#8B2635;opacity:1}
 </style></head><body><div id="stage"><div id="bug">
