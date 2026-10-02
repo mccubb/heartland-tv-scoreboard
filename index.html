@@ -28,6 +28,20 @@ const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awaySc
 function read(){try{return {...defaults,...JSON.parse(localStorage.getItem("htv-score")||"{}")}}catch(e){return {...defaults}}}
 function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":n===5?"OT":n+"OT"}
 function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);if(s.seconds===0)s.running=false}return s}
-function setScore(el,val){const cur=el.querySelector(".score-current"),old=el.querySelector(".score-old");if(cur.textContent!==String(val)){old.textContent=cur.textContent;cur.textContent=val;el.classList.remove("cross");void el.offsetWidth;el.classList.add("cross")}}function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
+function setScore(el,val){
+ const cur=el.querySelector(".score-current"),old=el.querySelector(".score-old");
+ const next=String(val);
+ if(cur.textContent===next)return;
+ old.getAnimations().forEach(a=>a.cancel());
+ cur.getAnimations().forEach(a=>a.cancel());
+ old.textContent=cur.textContent;
+ old.style.opacity="1";
+ cur.textContent=next;
+ cur.style.opacity="0";
+ old.animate([{opacity:1},{opacity:.7,offset:.35},{opacity:0}],{duration:850,easing:"ease-in-out",fill:"forwards"});
+ cur.animate([{opacity:0},{opacity:.3,offset:.35},{opacity:1}],{duration:850,easing:"ease-in-out",fill:"forwards"});
+ setTimeout(()=>{old.style.opacity="0";cur.style.opacity="1"},870);
+}
+function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
 draw();setInterval(draw,200);window.addEventListener("storage",draw);
 </script></body></html>
