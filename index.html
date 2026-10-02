@@ -20,8 +20,8 @@
 @keyframes oldScore{0%{opacity:1;transform:scale(1)}45%{opacity:.45;transform:scale(.985)}100%{opacity:0;transform:scale(.97)}}
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}
 .home .score,.home #homeScore{background:#0A0674!important;}
-.score-flash{position:absolute;inset:0;width:100%;height:100%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1}
-.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;inset:0;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:fill!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:none!important;mix-blend-mode:normal!important}
+.score-flash{position:absolute;inset:0;width:100%;height:100%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1;will-change:transform;transform:translate3d(100%,0,0);clip-path:none!important;backface-visibility:hidden}
+.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;inset:-7%;width:114%!important;height:114%!important;max-width:none!important;max-height:none!important;object-fit:fill!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:none!important;mix-blend-mode:normal!important;will-change:transform}
 .score-flash .phmark{display:block;font-size:48px;line-height:1;font-weight:900;color:#8B2635;opacity:1}
 </style></head><body><div id="stage"><div id="bug">
 <div class="team home"><div class="info"><div class="top"><span class="seed">1</span><span class="name" id="homeName">HEARTLAND</span></div><div class="record">10-2</div></div><div class="score" id="homeScore"><span class="score-old"></span><span class="score-current">0</span><span class="score-flash homeflash"><img class="hcs-logo" src="data:image/jpeg;base64,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" alt="HCS"></span></div></div>
@@ -39,38 +39,33 @@ function setScore(el,val){
  if(cur.textContent===next)return;
  if(el.dataset.busy==="1"){el.dataset.pending=next;return}
  el.dataset.busy="1";
+ flash.getAnimations().forEach(a=>a.cancel());
  flash.style.display="flex";
  flash.style.opacity="1";
- flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
+ flash.style.clipPath="none";
+ flash.style.transform="translate3d(100%,0,0)";
 
- const coverFrames=[
-  {clipPath:"polygon(100% 0,100% 100%,100% 100%,100% 0)"},
-  {offset:.25,clipPath:"polygon(78% 0,100% 0,100% 100%,72% 100%,79% 82%,71% 66%,80% 50%,72% 33%,79% 16%)"},
-  {offset:.5,clipPath:"polygon(49% 0,100% 0,100% 100%,42% 100%,50% 82%,41% 66%,51% 50%,42% 33%,49% 16%)"},
-  {offset:.75,clipPath:"polygon(20% 0,100% 0,100% 100%,13% 100%,21% 82%,12% 66%,22% 50%,13% 33%,20% 16%)"},
-  {clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
- ];
- const cover=flash.animate(coverFrames,{duration:800,easing:"cubic-bezier(.45,.02,.25,1)",fill:"forwards"});
+ // Smooth compositor-only slide: the white/logo panel physically travels across the score box.
+ const cover=flash.animate(
+   [{transform:"translate3d(100%,0,0)"},{transform:"translate3d(0%,0,0)"}],
+   {duration:620,easing:"cubic-bezier(.22,.61,.36,1)",fill:"forwards"}
+ );
  cover.onfinish=()=>{
-   // Score changes only while the white layer completely hides it.
+   // Swap the number only while the score is completely covered.
    cur.textContent=next;
    setTimeout(()=>{
-     const revealFrames=[
-       {clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
-       {offset:.25,clipPath:"polygon(0 0,79% 0,72% 16%,80% 33%,71% 50%,79% 66%,71% 82%,78% 100%,0 100%)"},
-       {offset:.5,clipPath:"polygon(0 0,50% 0,42% 16%,51% 33%,41% 50%,50% 66%,41% 82%,49% 100%,0 100%)"},
-       {offset:.75,clipPath:"polygon(0 0,21% 0,13% 16%,22% 33%,12% 50%,21% 66%,12% 82%,20% 100%,0 100%)"},
-       {clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
-     ];
-     const reveal=flash.animate(revealFrames,{duration:800,easing:"cubic-bezier(.45,.02,.25,1)",fill:"forwards"});
+     const reveal=flash.animate(
+       [{transform:"translate3d(0%,0,0)"},{transform:"translate3d(-100%,0,0)"}],
+       {duration:620,easing:"cubic-bezier(.22,.61,.36,1)",fill:"forwards"}
+     );
      reveal.onfinish=()=>{
        flash.style.display="none";
-       flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
+       flash.style.transform="translate3d(100%,0,0)";
        el.dataset.busy="0";
        const pending=el.dataset.pending;
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
-   },220);
+   },120);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
