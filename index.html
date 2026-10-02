@@ -19,9 +19,9 @@
 .score .score-current,.score .score-old{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}.score .score-old{opacity:0;pointer-events:none}.score.cross .score-current{animation:newScore .65s ease-in-out both}.score.cross .score-old{animation:oldScore .65s ease-in-out both}
 @keyframes oldScore{0%{opacity:1;transform:scale(1)}45%{opacity:.45;transform:scale(.985)}100%{opacity:0;transform:scale(.97)}}
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}</style></head><body><div id="stage"><div id="bug">
-<div class="team home"><div class="info"><div class="top"><span class="seed">1</span><span class="name" id="homeName">HEARTLAND</span></div><div class="record">10-2</div></div><div class="score" id="homeScore"><span class="score-old"></span><span class="score-current">0</span></div></div>
+<div class="team home"><div class="info"><div class="top"><span class="seed">1</span><span class="name" id="homeName">HEARTLAND</span></div><div class="record">10-2</div></div><div class="score" id="homeScore"><span class="score-old"></span><span class="score-current">0</span><span class="score-flash"><img src="https://givebutter.s3.amazonaws.com/profiles/oY9JqUN5XrHy5p41YqmXC2AUnz5RBFDVO1oS1rp4.jpg" alt="HCS"></span></div></div>
 <div class="center"><div class="clock" id="clock">8:00</div><div class="period" id="period">1ST</div></div>
-<div class="team away"><div class="score" id="awayScore"><span class="score-old"></span><span class="score-current">0</span></div><div class="info"><div class="top"><span class="seed">5</span><span class="name" id="awayName">PLAZA HEIGHTS</span></div><div class="record">7-4</div></div></div>
+<div class="team away"><div class="score" id="awayScore"><span class="score-old"></span><span class="score-current">0</span><span class="score-flash"><span class="phmark">PH</span></span></div><div class="info"><div class="top"><span class="seed">5</span><span class="name" id="awayName">PLAZA HEIGHTS</span></div><div class="record">7-4</div></div></div>
 </div></div>
 <script>
 const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awayScore:0,period:1,seconds:480,running:false,stamp:Date.now()};
@@ -29,18 +29,16 @@ function read(){try{return {...defaults,...JSON.parse(localStorage.getItem("htv-
 function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":n===5?"OT":n+"OT"}
 function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);if(s.seconds===0)s.running=false}return s}
 function setScore(el,val){
- const cur=el.querySelector(".score-current"),old=el.querySelector(".score-old");
+ const cur=el.querySelector(".score-current"),flash=el.querySelector(".score-flash");
  const next=String(val);
  if(cur.textContent===next)return;
- old.getAnimations().forEach(a=>a.cancel());
- cur.getAnimations().forEach(a=>a.cancel());
- old.textContent=cur.textContent;
- old.style.opacity="1";
- cur.textContent=next;
- cur.style.opacity="0";
- old.animate([{opacity:1},{opacity:.7,offset:.35},{opacity:0}],{duration:850,easing:"ease-in-out",fill:"forwards"});
- cur.animate([{opacity:0},{opacity:.3,offset:.35},{opacity:1}],{duration:850,easing:"ease-in-out",fill:"forwards"});
- setTimeout(()=>{old.style.opacity="0";cur.style.opacity="1"},870);
+ if(el.dataset.busy==="1"){cur.textContent=next;return}
+ el.dataset.busy="1";el.classList.add("animating");
+ flash.getAnimations().forEach(a=>a.cancel());cur.getAnimations().forEach(a=>a.cancel());
+ const flashIn=flash.animate([{opacity:0,transform:"scaleX(.05)"},{opacity:1,transform:"scaleX(1)",offset:.32},{opacity:1,transform:"scaleX(1)",offset:.68},{opacity:0,transform:"scaleX(.08)"}],{duration:900,easing:"ease-in-out",fill:"forwards"});
+ cur.animate([{opacity:1},{opacity:0,offset:.25},{opacity:0,offset:.68},{opacity:1}],{duration:900,easing:"ease-in-out",fill:"forwards"});
+ setTimeout(()=>{cur.textContent=next},430);
+ flashIn.onfinish=()=>{flash.style.opacity="0";cur.style.opacity="1";el.dataset.busy="0";el.classList.remove("animating")};
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
 draw();setInterval(draw,200);window.addEventListener("storage",draw);
