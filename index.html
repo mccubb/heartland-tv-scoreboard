@@ -21,8 +21,8 @@
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}
 .home .score,.home #homeScore{background:#0A0674!important;}
 .score-flash{position:absolute;inset:0;width:100%;height:100%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1;backface-visibility:hidden;will-change:clip-path;clip-path:polygon(100% 0,100% 100%,100% 100%,100% 0)}
-.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:50%;width:94%!important;height:94%!important;transform:translate(-50%,-50%);max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:none!important;mix-blend-mode:normal!important}
-.score-flash .phmark{display:block;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:48px;line-height:1;font-weight:900;color:#8B2635;opacity:1}
+.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:50%;width:96%!important;height:96%!important;transform:translate(-50%,-50%) scale(.94);max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:drop-shadow(0 3px 2px rgba(0,0,0,.24)) drop-shadow(0 1px 0 rgba(255,255,255,.8));mix-blend-mode:normal!important;will-change:transform}
+.score-flash .phmark{display:block;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);font-size:50px;line-height:1;font-weight:900;color:#8B2635;opacity:1;text-shadow:0 3px 2px rgba(0,0,0,.24),0 1px 0 rgba(255,255,255,.8);will-change:transform}
 </style></head><body><div id="stage"><div id="bug">
 <div class="team home"><div class="info"><div class="top"><span class="seed">1</span><span class="name" id="homeName">HEARTLAND</span></div><div class="record">10-2</div></div><div class="score" id="homeScore"><span class="score-old"></span><span class="score-current">0</span><span class="score-flash homeflash"><img class="hcs-logo" src="data:image/jpeg;base64,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" alt="HCS"></span></div></div>
 <div class="center"><div class="clock" id="clock">8:00</div><div class="period" id="period">1ST</div></div>
@@ -35,41 +35,55 @@ function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":n===5?"OT
 function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);if(s.seconds===0)s.running=false}return s}
 function setScore(el,val){
  const cur=el.querySelector(".score-current"),flash=el.querySelector(".score-flash");
- const next=String(val);
+ const mark=flash.querySelector(".hcs-logo,.phmark"),next=String(val);
  if(cur.textContent===next)return;
  if(el.dataset.busy==="1"){el.dataset.pending=next;return}
  el.dataset.busy="1";
  flash.getAnimations().forEach(a=>a.cancel());
+ if(mark) mark.getAnimations().forEach(a=>a.cancel());
  flash.style.display="flex";
 
- const ripFrames=[
-  {offset:0,clipPath:"polygon(100% 0,100% 100%,100% 100%,100% 0)"},
-  {offset:.18,clipPath:"polygon(79% 0,100% 0,100% 100%,73% 100%,79% 88%,72% 76%,80% 64%,73% 51%,81% 39%,74% 26%,80% 13%)"},
-  {offset:.38,clipPath:"polygon(56% 0,100% 0,100% 100%,49% 100%,57% 88%,48% 76%,58% 64%,50% 51%,59% 39%,49% 26%,57% 13%)"},
-  {offset:.58,clipPath:"polygon(32% 0,100% 0,100% 100%,25% 100%,33% 88%,24% 76%,34% 64%,26% 51%,35% 39%,25% 26%,33% 13%)"},
-  {offset:.78,clipPath:"polygon(10% 0,100% 0,100% 100%,3% 100%,11% 88%,2% 76%,12% 64%,4% 51%,13% 39%,3% 26%,11% 13%)"},
+ // Rough diagonal boundary: starts at TOP-RIGHT and sweeps toward BOTTOM-LEFT.
+ const coverFrames=[
+  {offset:0,clipPath:"polygon(100% 0,100% 0,100% 0)"},
+  {offset:.14,clipPath:"polygon(78% 0,100% 0,100% 22%,94% 19%,90% 27%,85% 23%,82% 31%)"},
+  {offset:.28,clipPath:"polygon(55% 0,100% 0,100% 45%,94% 40%,90% 49%,84% 44%,80% 54%,74% 49%,70% 59%)"},
+  {offset:.44,clipPath:"polygon(30% 0,100% 0,100% 70%,94% 65%,89% 74%,83% 69%,78% 79%,72% 74%,67% 84%,61% 79%,56% 89%)"},
+  {offset:.60,clipPath:"polygon(7% 0,100% 0,100% 93%,94% 88%,89% 97%,83% 92%,78% 100%,53% 100%,58% 94%,50% 98%,45% 90%,39% 95%,34% 86%,28% 91%,23% 82%)"},
+  {offset:.78,clipPath:"polygon(0 0,100% 0,100% 100%,23% 100%,28% 94%,20% 90%,25% 83%,17% 79%,22% 72%,14% 68%,19% 61%,11% 57%,16% 50%,8% 46%)"},
   {offset:1,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
  ];
- const cover=flash.animate(ripFrames,{duration:250,easing:"linear",fill:"forwards"});
+ const cover=flash.animate(coverFrames,{duration:330,easing:"cubic-bezier(.22,.72,.24,1)",fill:"forwards"});
+ if(mark) mark.animate([
+   {transform:"translate(-50%,-50%) scale(.94)"},
+   {offset:.72,transform:"translate(-50%,-50%) scale(.985)"},
+   {transform:"translate(-50%,-50%) scale(1)"}
+ ],{duration:330,easing:"cubic-bezier(.2,.8,.2,1)",fill:"forwards"});
  cover.onfinish=()=>{
    cur.textContent=next;
    setTimeout(()=>{
-    const clearFrames=[
-     {offset:0,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
-     {offset:.2,clipPath:"polygon(0 0,81% 0,74% 13%,82% 26%,73% 39%,81% 51%,72% 64%,80% 76%,73% 88%,79% 100%,0 100%)"},
-     {offset:.4,clipPath:"polygon(0 0,58% 0,51% 13%,59% 26%,50% 39%,58% 51%,49% 64%,57% 76%,50% 88%,56% 100%,0 100%)"},
-     {offset:.6,clipPath:"polygon(0 0,35% 0,28% 13%,36% 26%,27% 39%,35% 51%,26% 64%,34% 76%,27% 88%,33% 100%,0 100%)"},
-     {offset:.8,clipPath:"polygon(0 0,12% 0,5% 13%,13% 26%,4% 39%,12% 51%,3% 64%,11% 76%,4% 88%,10% 100%,0 100%)"},
-     {offset:1,clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
-    ];
-    const clear=flash.animate(clearFrames,{duration:250,easing:"linear",fill:"forwards"});
-    clear.onfinish=()=>{
-      flash.style.display="none";
-      el.dataset.busy="0";
-      const pending=el.dataset.pending;
-      if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
-    };
-   },110);
+     // Continue the same top-right -> bottom-left tearing direction while removing the logo sheet.
+     const clearFrames=[
+      {offset:0,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
+      {offset:.18,clipPath:"polygon(0 18%,7% 23%,3% 30%,11% 34%,6% 41%,14% 45%,9% 52%,17% 56%,12% 63%,20% 67%,15% 74%,23% 78%,18% 85%,26% 89%,21% 96%,0 100%)"},
+      {offset:.38,clipPath:"polygon(0 42%,7% 47%,2% 54%,10% 58%,5% 65%,13% 69%,8% 76%,16% 80%,11% 87%,19% 91%,14% 98%,0 100%)"},
+      {offset:.58,clipPath:"polygon(0 66%,7% 71%,2% 78%,10% 82%,5% 89%,13% 93%,8% 100%,0 100%)"},
+      {offset:.78,clipPath:"polygon(0 88%,7% 93%,2% 100%,0 100%)"},
+      {offset:1,clipPath:"polygon(0 100%,0 100%,0 100%)"}
+     ];
+     const clear=flash.animate(clearFrames,{duration:300,easing:"cubic-bezier(.32,0,.2,1)",fill:"forwards"});
+     if(mark) mark.animate([
+       {transform:"translate(-50%,-50%) scale(1)"},
+       {offset:.35,transform:"translate(-50%,-50%) scale(1.015)"},
+       {transform:"translate(-50%,-50%) scale(.97)"}
+     ],{duration:300,easing:"ease-out",fill:"forwards"});
+     clear.onfinish=()=>{
+       flash.style.display="none";
+       el.dataset.busy="0";
+       const pending=el.dataset.pending;
+       if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
+     };
+   },90);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
