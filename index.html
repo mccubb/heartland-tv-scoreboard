@@ -79,17 +79,20 @@ function setScore(el,val){
      curtain.style.clipPath="inset(0)";
    }
    setTimeout(()=>{
-     // Only after the white beat does the logo appear.
-     flash.style.display="flex";
+     // Remove the rake layer first, then reveal the logo on the next paint.
+     // This prevents a leftover white rake streak from flashing across the horse.
      if(curtain) curtain.style.display="none";
-     if(mark){
+     requestAnimationFrame(()=>{
+       flash.style.display="flex";
+       if(mark){
        mark.animate([
        {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"},
        {offset:.58,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.18)"},
        {offset:.82,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-1deg) rotateY(1deg) scale(1.22)"},
        {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.19)"}
      ],{duration:390,easing:"cubic-bezier(.16,.58,.22,1)",fill:"forwards"});
-   }
+       }
+     });
 
    setTimeout(()=>{
      // BEAT 3: second white tornado/rip rapidly grabs the logo and tears it away.
