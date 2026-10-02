@@ -86,13 +86,11 @@ function setScore(el,val){
    // Continue the same forward motion immediately—no visible small-logo pause.
    if(mark){
      mark.animate([
-       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(6deg) rotateY(-8deg) rotateZ(-.9deg) scale(1.03)",filter:"drop-shadow(8px 10px 6px rgba(0,0,0,.34))"},
-       {offset:.24,transform:"translate3d(-49.2%,-50.7%,0) perspective(175px) rotateX(4deg) rotateY(-5.5deg) rotateZ(-.5deg) scale(1.085)",filter:"drop-shadow(6px 9px 6px rgba(0,0,0,.32))"},
-       {offset:.52,transform:"translate3d(-50.3%,-49.7%,0) perspective(175px) rotateX(1.2deg) rotateY(-1.8deg) rotateZ(-.1deg) scale(1.155)",filter:"drop-shadow(3px 8px 5px rgba(0,0,0,.30))"},
-       {offset:.76,transform:"translate3d(-50.4%,-49.6%,0) perspective(175px) rotateX(-1deg) rotateY(1.4deg) rotateZ(.15deg) scale(1.215)",filter:"drop-shadow(-2px 8px 5px rgba(0,0,0,.29))"},
-       {offset:.90,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(.35deg) rotateY(-.5deg) rotateZ(0deg) scale(1.238)",filter:"drop-shadow(1px 8px 5px rgba(0,0,0,.30))"},
-       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.215)",filter:"drop-shadow(0 7px 5px rgba(0,0,0,.28))"}
-     ],{duration:780,easing:"cubic-bezier(.16,.62,.22,1)",fill:"forwards"});
+       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"},
+       {offset:.58,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.18)"},
+       {offset:.82,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-1deg) rotateY(1deg) scale(1.22)"},
+       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.19)"}
+     ],{duration:390,easing:"cubic-bezier(.16,.58,.22,1)",fill:"forwards"});
    }
 
    setTimeout(()=>{
@@ -118,7 +116,7 @@ function setScore(el,val){
        const pending=el.dataset.pending;
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
-   },780);
+   },390);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
