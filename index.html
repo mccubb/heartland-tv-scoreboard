@@ -86,19 +86,20 @@ function setScore(el,val){
    // Continue the same forward motion immediately—no visible small-logo pause.
    if(mark){
      mark.animate([
-       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(190px) rotateX(5deg) rotateY(-7deg) rotateZ(-.8deg) scale(1.06)",filter:"drop-shadow(7px 9px 5px rgba(0,0,0,.34))"},
-       {offset:.32,transform:"translate3d(-49%,-51%,0) perspective(190px) rotateX(2.5deg) rotateY(-3deg) rotateZ(-.25deg) scale(1.13)",filter:"drop-shadow(5px 8px 5px rgba(0,0,0,.30))"},
-       {offset:.68,transform:"translate3d(-50.5%,-49.5%,0) perspective(190px) rotateX(-1.2deg) rotateY(1.8deg) rotateZ(.18deg) scale(1.205)",filter:"drop-shadow(-2px 7px 4px rgba(0,0,0,.28))"},
-       {offset:.84,transform:"translate3d(-50%,-50%,0) perspective(190px) rotateX(.5deg) rotateY(-.6deg) rotateZ(0deg) scale(1.235)",filter:"drop-shadow(1px 8px 5px rgba(0,0,0,.30))"},
-       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(190px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.205)",filter:"drop-shadow(0 7px 5px rgba(0,0,0,.28))"}
-     ],{duration:390,easing:"cubic-bezier(.16,.58,.22,1)",fill:"forwards"});
+       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(6deg) rotateY(-8deg) rotateZ(-.9deg) scale(1.03)",filter:"drop-shadow(8px 10px 6px rgba(0,0,0,.34))"},
+       {offset:.24,transform:"translate3d(-49.2%,-50.7%,0) perspective(175px) rotateX(4deg) rotateY(-5.5deg) rotateZ(-.5deg) scale(1.085)",filter:"drop-shadow(6px 9px 6px rgba(0,0,0,.32))"},
+       {offset:.52,transform:"translate3d(-50.3%,-49.7%,0) perspective(175px) rotateX(1.2deg) rotateY(-1.8deg) rotateZ(-.1deg) scale(1.155)",filter:"drop-shadow(3px 8px 5px rgba(0,0,0,.30))"},
+       {offset:.76,transform:"translate3d(-50.4%,-49.6%,0) perspective(175px) rotateX(-1deg) rotateY(1.4deg) rotateZ(.15deg) scale(1.215)",filter:"drop-shadow(-2px 8px 5px rgba(0,0,0,.29))"},
+       {offset:.90,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(.35deg) rotateY(-.5deg) rotateZ(0deg) scale(1.238)",filter:"drop-shadow(1px 8px 5px rgba(0,0,0,.30))"},
+       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.215)",filter:"drop-shadow(0 7px 5px rgba(0,0,0,.28))"}
+     ],{duration:720,easing:"cubic-bezier(.16,.62,.22,1)",fill:"forwards"});
      const shine=flash.animate([
        {offset:0,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(-82%) skewX(-18deg)"},
        {offset:.20,opacity:.15,transform:"translate3d(-50%,-50%,0) translateX(-58%) skewX(-18deg)"},
        {offset:.52,opacity:.62,transform:"translate3d(-50%,-50%,0) translateX(-4%) skewX(-18deg)"},
        {offset:.78,opacity:.22,transform:"translate3d(-50%,-50%,0) translateX(52%) skewX(-18deg)"},
        {offset:1,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(82%) skewX(-18deg)"}
-     ],{duration:390,easing:"ease-out",fill:"forwards"});
+     ],{duration:720,easing:"ease-in-out",fill:"forwards"});
    }
 
    setTimeout(()=>{
@@ -124,7 +125,7 @@ function setScore(el,val){
        const pending=el.dataset.pending;
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
-   },390);
+   },720);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
