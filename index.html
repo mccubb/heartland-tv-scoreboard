@@ -45,29 +45,11 @@ function setScore(el,val){
  if(cur.textContent===next)return;
  if(el.dataset.busy==="1"){el.dataset.pending=next;return}
  el.dataset.busy="1";
-
- let safetyTimer;
- const finish=()=>{
-   clearTimeout(safetyTimer);
-   flash.style.display="none";
-   if(curtain) curtain.style.display="none";
-   el.dataset.busy="0";
-   const pending=el.dataset.pending;
-   if(pending!==undefined){
-     delete el.dataset.pending;
-     if(pending!==cur.textContent)setScore(el,pending);
-   }
- };
- // Never allow one failed animation callback to lock scoring.
- safetyTimer=setTimeout(finish,2500);
-
  flash.getAnimations().forEach(a=>a.cancel());
  if(mark) mark.getAnimations().forEach(a=>a.cancel());
  flash.style.display="flex";
  flash.style.opacity="1";
-
  if(curtain){
-   curtain.getAnimations().forEach(a=>a.cancel());
    curtain.style.display="block";
    const sheet=curtain.animate([
      {offset:0,clipPath:"polygon(100% 0,100% 0,100% 0)"},
@@ -79,6 +61,7 @@ function setScore(el,val){
    sheet.onfinish=()=>{curtain.style.display="none"};
  }
 
+ // BEAT 1: very fast diagonal rip/tornado into the score box.
  const tearIn=flash.animate([
    {offset:0,transform:"translate3d(92%,-92%,0) rotate(27deg) scale(.24)"},
    {offset:.22,transform:"translate3d(55%,-55%,0) rotate(18deg) scale(.48)"},
@@ -86,6 +69,7 @@ function setScore(el,val){
    {offset:.78,transform:"translate3d(2%,-2%,0) rotate(2deg) scale(.98)"},
    {offset:1,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"}
  ],{duration:175,easing:"cubic-bezier(.12,.75,.18,1)",fill:"forwards"});
+
 
  if(mark){
    mark.animate([
@@ -95,46 +79,53 @@ function setScore(el,val){
      {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"}
    ],{duration:175,easing:"cubic-bezier(.12,.7,.2,1)",fill:"forwards"});
  }
-
  tearIn.onfinish=()=>{
+   // Old score is now completely hidden.
    cur.textContent=next;
-   if(!mark){finish();return}
 
-   const hero=mark.animate([
-     {offset:0,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(6deg) rotateY(-8deg) rotateZ(-.9deg) scale(1.03)",filter:"drop-shadow(8px 10px 6px rgba(0,0,0,.34))"},
-     {offset:.24,transform:"translate3d(-49.2%,-50.7%,0) perspective(175px) rotateX(4deg) rotateY(-5.5deg) rotateZ(-.5deg) scale(1.085)",filter:"drop-shadow(6px 9px 6px rgba(0,0,0,.32))"},
-     {offset:.52,transform:"translate3d(-50.3%,-49.7%,0) perspective(175px) rotateX(1.2deg) rotateY(-1.8deg) rotateZ(-.1deg) scale(1.155)",filter:"drop-shadow(3px 8px 5px rgba(0,0,0,.30))"},
-     {offset:.76,transform:"translate3d(-50.4%,-49.6%,0) perspective(175px) rotateX(-1deg) rotateY(1.4deg) rotateZ(.15deg) scale(1.215)",filter:"drop-shadow(-2px 8px 5px rgba(0,0,0,.29))"},
-     {offset:.90,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(.35deg) rotateY(-.5deg) rotateZ(0deg) scale(1.238)",filter:"drop-shadow(1px 8px 5px rgba(0,0,0,.30))"},
-     {offset:1,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.215)",filter:"drop-shadow(0 7px 5px rgba(0,0,0,.28))"}
-   ],{duration:780,easing:"cubic-bezier(.16,.62,.22,1)",fill:"forwards"});
+   // Continue the same forward motion immediately—no visible small-logo pause.
+   if(mark){
+     mark.animate([
+       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(6deg) rotateY(-8deg) rotateZ(-.9deg) scale(1.03)",filter:"drop-shadow(8px 10px 6px rgba(0,0,0,.34))"},
+       {offset:.24,transform:"translate3d(-49.2%,-50.7%,0) perspective(175px) rotateX(4deg) rotateY(-5.5deg) rotateZ(-.5deg) scale(1.085)",filter:"drop-shadow(6px 9px 6px rgba(0,0,0,.32))"},
+       {offset:.52,transform:"translate3d(-50.3%,-49.7%,0) perspective(175px) rotateX(1.2deg) rotateY(-1.8deg) rotateZ(-.1deg) scale(1.155)",filter:"drop-shadow(3px 8px 5px rgba(0,0,0,.30))"},
+       {offset:.76,transform:"translate3d(-50.4%,-49.6%,0) perspective(175px) rotateX(-1deg) rotateY(1.4deg) rotateZ(.15deg) scale(1.215)",filter:"drop-shadow(-2px 8px 5px rgba(0,0,0,.29))"},
+       {offset:.90,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(.35deg) rotateY(-.5deg) rotateZ(0deg) scale(1.238)",filter:"drop-shadow(1px 8px 5px rgba(0,0,0,.30))"},
+       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(175px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1.215)",filter:"drop-shadow(0 7px 5px rgba(0,0,0,.28))"}
+     ],{duration:780,easing:"cubic-bezier(.16,.62,.22,1)",fill:"forwards"});
+     const shine=flash.animate([
+       {offset:0,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(-82%) skewX(-18deg)"},
+       {offset:.20,opacity:.15,transform:"translate3d(-50%,-50%,0) translateX(-58%) skewX(-18deg)"},
+       {offset:.52,opacity:.62,transform:"translate3d(-50%,-50%,0) translateX(-4%) skewX(-18deg)"},
+       {offset:.78,opacity:.22,transform:"translate3d(-50%,-50%,0) translateX(52%) skewX(-18deg)"},
+       {offset:1,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(82%) skewX(-18deg)"}
+     ],{duration:780,easing:"ease-in-out",fill:"forwards"});
+   }
 
-   flash.animate([
-     {offset:0,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(-82%) skewX(-18deg)"},
-     {offset:.20,opacity:.15,transform:"translate3d(-50%,-50%,0) translateX(-58%) skewX(-18deg)"},
-     {offset:.52,opacity:.62,transform:"translate3d(-50%,-50%,0) translateX(-4%) skewX(-18deg)"},
-     {offset:.78,opacity:.22,transform:"translate3d(-50%,-50%,0) translateX(52%) skewX(-18deg)"},
-     {offset:1,opacity:0,transform:"translate3d(-50%,-50%,0) translateX(82%) skewX(-18deg)"}
-   ],{duration:780,easing:"ease-in-out",fill:"forwards"});
-
-   hero.onfinish=()=>{
-     setTimeout(()=>{
-       const tearOut=flash.animate([
-         {offset:0,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"},
-         {offset:.18,transform:"translate3d(-4%,4%,0) rotate(-3deg) scale(1.07)"},
-         {offset:.42,transform:"translate3d(-18%,18%,0) rotate(-9deg) scale(.98)"},
-         {offset:.68,transform:"translate3d(-48%,48%,0) rotate(-18deg) scale(.72)"},
-         {offset:.88,transform:"translate3d(-78%,78%,0) rotate(-26deg) scale(.46)"},
-         {offset:1,transform:"translate3d(-104%,104%,0) rotate(-31deg) scale(.25)"}
-       ],{duration:185,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
+   setTimeout(()=>{
+     // BEAT 3: second white tornado/rip rapidly grabs the logo and tears it away.
+     const tearOut=flash.animate([
+       {offset:0,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"},
+       {offset:.18,transform:"translate3d(-4%,4%,0) rotate(-3deg) scale(1.07)"},
+       {offset:.42,transform:"translate3d(-18%,18%,0) rotate(-9deg) scale(.98)"},
+       {offset:.68,transform:"translate3d(-48%,48%,0) rotate(-18deg) scale(.72)"},
+       {offset:.88,transform:"translate3d(-78%,78%,0) rotate(-26deg) scale(.46)"},
+       {offset:1,transform:"translate3d(-104%,104%,0) rotate(-31deg) scale(.25)"}
+     ],{duration:185,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
+     if(mark){
        mark.animate([
          {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.19)"},
          {offset:.35,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-2deg) rotateY(3deg) scale(1.23)"},
          {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(6deg) rotateY(10deg) scale(.90)"}
        ],{duration:185,easing:"ease-in",fill:"forwards"});
-       tearOut.onfinish=finish;
-     },140);
-   };
+     }
+     tearOut.onfinish=()=>{
+       flash.style.display="none";
+       el.dataset.busy="0";
+       const pending=el.dataset.pending;
+       if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
+     };
+   },780);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
