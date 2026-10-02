@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland TV Controls</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef1f4;color:#101820;font-family:Arial,Helvetica,sans-serif}.wrap{max-width:900px;margin:auto;padding:24px}.head{background:#174F86;color:#fff;padding:18px 22px;border-radius:10px;margin-bottom:18px}.head b{font-size:22px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 8px #0001}h2{margin:0 0 12px;font-size:18px}input,select{width:100%;padding:12px;font-size:18px;border:1px solid #cbd2d9;border-radius:7px;margin-bottom:10px}button{border:0;border-radius:7px;padding:13px 16px;margin:4px;font-size:17px;font-weight:800;cursor:pointer;background:#252a30;color:#fff}.blue{background:#174F86}.red{background:#9b2c2c}.score{font-size:48px;font-weight:900;text-align:center;margin:8px}.clock{font-size:44px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}.buttons{text-align:center}.wide{width:calc(100% - 8px)}.note{font-size:13px;color:#59636e;margin-top:12px}@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:12px}}
+</style></head><body><div class="wrap"><div class="head"><b>HEARTLAND TV</b><br>Basketball Scoreboard Control</div><div class="grid">
+<div class="card"><h2>Heartland</h2><input id="hn" value="HEARTLAND"><div class="score" id="hs">0</div><div class="buttons"><button onclick="score('home',-1)">−1</button><button class="blue" onclick="score('home',1)">+1</button><button class="blue" onclick="score('home',2)">+2</button><button class="blue" onclick="score('home',3)">+3</button></div></div>
+<div class="card"><h2>Opponent</h2><input id="an" value="GUEST"><div class="score" id="as">0</div><div class="buttons"><button onclick="score('away',-1)">−1</button><button class="blue" onclick="score('away',1)">+1</button><button class="blue" onclick="score('away',2)">+2</button><button class="blue" onclick="score('away',3)">+3</button></div></div>
+<div class="card"><h2>Game Clock</h2><div class="clock" id="clk">8:00</div><div class="buttons"><button class="blue wide" id="run" onclick="toggle()">START</button><button onclick="adjust(1)">+1 sec</button><button onclick="adjust(-1)">−1 sec</button><button onclick="setClock()">Set Clock</button></div></div>
+<div class="card"><h2>Period</h2><select id="per" onchange="periodSet()"><option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option><option value="4">4th</option><option value="5">OT</option></select><button class="red wide" onclick="resetGame()">RESET GAME</button><div class="note">Names and scores save automatically on this device.</div></div>
+</div></div>
+<script>
+const D={homeName:"HEARTLAND",awayName:"GUEST",homeScore:0,awayScore:0,period:1,seconds:480,running:false,stamp:Date.now()};
+function read(){try{return {...D,...JSON.parse(localStorage.getItem("htv-score")||"{}")}}catch(e){return {...D}}}
+function current(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);s.stamp=Date.now();if(!s.seconds)s.running=false}return s}
+function save(s){s.stamp=Date.now();localStorage.setItem("htv-score",JSON.stringify(s));draw()}
+function score(t,n){let s=current();let k=t+"Score";s[k]=Math.max(0,s[k]+n);save(s)}
+function toggle(){let s=current();s.running=!s.running;save(s)}
+function adjust(n){let s=current();s.seconds=Math.max(0,s.seconds+n);save(s)}
+function setClock(){let v=prompt("Enter clock as M:SS","8:00");if(!v)return;let p=v.split(":");let sec=(+p[0]*60)+(+p[1]||0);if(Number.isFinite(sec)){let s=current();s.seconds=Math.max(0,sec);s.running=false;save(s)}}
+function periodSet(){let s=current();s.period=+per.value;save(s)}
+function resetGame(){if(!confirm("Reset scores, clock and period?"))return;save({...D,homeName:hn.value||"HEARTLAND",awayName:an.value||"GUEST",stamp:Date.now()})}
+function names(){let s=current();s.homeName=hn.value.toUpperCase()||"HEARTLAND";s.awayName=an.value.toUpperCase()||"GUEST";save(s)}
+hn.onchange=names;an.onchange=names;
+function draw(){let s=current();hs.textContent=s.homeScore;as.textContent=s.awayScore;hn.value=s.homeName;an.value=s.awayName;per.value=s.period;let m=Math.floor(s.seconds/60),q=s.seconds%60;clk.textContent=m+":"+String(q).padStart(2,"0");run.textContent=s.running?"STOP":"START";run.className=(s.running?"red":"blue")+" wide"}
+draw();setInterval(draw,250);
+</script></body></html>
