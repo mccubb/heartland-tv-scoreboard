@@ -20,9 +20,9 @@
 @keyframes oldScore{0%{opacity:1;transform:scale(1)}45%{opacity:.45;transform:scale(.985)}100%{opacity:0;transform:scale(.97)}}
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}
 .home .score,.home #homeScore{background:#0A0674!important;}
-.score-flash{position:absolute;left:-42%;top:-42%;width:184%;height:184%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1;backface-visibility:hidden;transform:translate3d(82%,-82%,0) rotate(-.01deg);will-change:transform;contain:paint;clip-path:polygon(16% 0,100% 0,100% 100%,0 100%,0 84%,6% 80%,2% 74%,9% 69%,4% 63%,11% 58%,6% 52%,13% 47%,8% 41%,15% 36%,10% 30%,17% 25%,12% 19%,19% 14%,14% 8%,21% 3%)}
-.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:50%;width:52%!important;height:52%!important;transform:translate3d(-50%,-50%,0) perspective(180px) rotateY(-18deg) rotateZ(-2deg) scale(.90);transform-origin:50% 50%;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:drop-shadow(0 3px 2px rgba(0,0,0,.22));mix-blend-mode:normal!important;will-change:transform;backface-visibility:hidden}
-.score-flash .phmark{display:block;position:absolute;left:50%;top:50%;transform:translate3d(-50%,-50%,0) perspective(180px) rotateY(-18deg) rotateZ(-2deg) scale(.90);transform-origin:50% 50%;font-size:50px;line-height:1;font-weight:900;color:#8B2635;opacity:1;text-shadow:0 3px 2px rgba(0,0,0,.22);will-change:transform;backface-visibility:hidden}
+.score-flash{position:absolute;left:-30%;top:-30%;width:160%;height:160%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1;backface-visibility:hidden;transform:translate3d(72%,-72%,0) rotate(18deg) scale(.42);transform-origin:50% 50%;will-change:transform,opacity;contain:paint;clip-path:polygon(8% 0,100% 0,100% 92%,92% 100%,0 100%,5% 88%,0 79%,8% 70%,1% 61%,10% 52%,2% 43%,11% 34%,3% 25%,12% 16%,5% 8%)}
+.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:50%;width:58%!important;height:58%!important;transform:translate3d(-50%,-50%,0) scale(.68);transform-origin:50% 50%;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:drop-shadow(0 4px 4px rgba(0,0,0,.24));mix-blend-mode:normal!important;will-change:transform;backface-visibility:hidden}
+.score-flash .phmark{display:block;position:absolute;left:50%;top:50%;transform:translate3d(-50%,-50%,0) scale(.68);transform-origin:50% 50%;font-size:50px;line-height:1;font-weight:900;color:#8B2635;opacity:1;text-shadow:0 4px 4px rgba(0,0,0,.24);will-change:transform;backface-visibility:hidden}
 </style></head><body><div id="stage"><div id="bug">
 <div class="team home"><div class="info"><div class="top"><span class="seed">1</span><span class="name" id="homeName">HEARTLAND</span></div><div class="record">10-2</div></div><div class="score" id="homeScore"><span class="score-old"></span><span class="score-current">0</span><span class="score-flash homeflash"><img class="hcs-logo" src="data:image/jpeg;base64,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" alt="HCS"></span></div></div>
 <div class="center"><div class="clock" id="clock">8:00</div><div class="period" id="period">1ST</div></div>
@@ -42,45 +42,54 @@ function setScore(el,val){
  flash.getAnimations().forEach(a=>a.cancel());
  if(mark) mark.getAnimations().forEach(a=>a.cancel());
  flash.style.display="flex";
- flash.style.transform="translate3d(82%,-82%,0) rotate(-.01deg)";
+ flash.style.opacity="1";
 
- // Pre-shaped torn sheet sweeps diagonally top-right -> bottom-left using transform only.
- const ripIn=flash.animate([
-   {offset:0,transform:"translate3d(82%,-82%,0) rotate(-.01deg)"},
-   {offset:.56,transform:"translate3d(18%,-18%,0) rotate(-.01deg)"},
-   {offset:.82,transform:"translate3d(3%,-3%,0) rotate(-.01deg)"},
-   {offset:1,transform:"translate3d(0,0,0) rotate(-.01deg)"}
- ],{duration:285,easing:"cubic-bezier(.18,.78,.22,1)",fill:"forwards"});
+ // BEAT 1: very fast diagonal rip/tornado into the score box.
+ const tearIn=flash.animate([
+   {offset:0,transform:"translate3d(78%,-78%,0) rotate(22deg) scale(.34)"},
+   {offset:.28,transform:"translate3d(38%,-38%,0) rotate(13deg) scale(.58)"},
+   {offset:.58,transform:"translate3d(10%,-10%,0) rotate(5deg) scale(.86)"},
+   {offset:.82,transform:"translate3d(-2%,2%,0) rotate(-2deg) scale(1.04)"},
+   {offset:1,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"}
+ ],{duration:145,easing:"cubic-bezier(.12,.75,.18,1)",fill:"forwards"});
 
- // Reference-style quick 3D turn: appears angled, turns face-on as the tear reveals it.
- if(mark) mark.animate([
-   {offset:0,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(-20deg) rotateZ(-2.5deg) scale(.88)"},
-   {offset:.48,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(-12deg) rotateZ(-1.4deg) scale(.94)"},
-   {offset:.82,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(3deg) rotateZ(.4deg) scale(1.025)"},
-   {offset:1,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(0deg) rotateZ(0deg) scale(1)"}
- ],{duration:285,easing:"cubic-bezier(.18,.78,.22,1)",fill:"forwards"});
-
- ripIn.onfinish=()=>{
+ tearIn.onfinish=()=>{
+   // Old score is now completely hidden.
    cur.textContent=next;
+
+   // BEAT 2: logo appears centered/deep, then slowly comes toward the viewer.
+   if(mark){
+     mark.animate([
+       {offset:0,transform:"translate3d(-50%,-50%,0) scale(.62)"},
+       {offset:.18,transform:"translate3d(-50%,-50%,0) scale(.68)"},
+       {offset:.72,transform:"translate3d(-50%,-50%,0) scale(.94)"},
+       {offset:1,transform:"translate3d(-50%,-50%,0) scale(1.08)"}
+     ],{duration:390,easing:"cubic-bezier(.18,.62,.28,1)",fill:"forwards"});
+   }
+
    setTimeout(()=>{
-     const ripOut=flash.animate([
-       {offset:0,transform:"translate3d(0,0,0) rotate(-.01deg)"},
-       {offset:.18,transform:"translate3d(-3%,3%,0) rotate(-.01deg)"},
-       {offset:.55,transform:"translate3d(-25%,25%,0) rotate(-.01deg)"},
-       {offset:1,transform:"translate3d(-84%,84%,0) rotate(-.01deg)"}
-     ],{duration:275,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
-     if(mark) mark.animate([
-       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(0deg) rotateZ(0deg) scale(1)"},
-       {offset:.34,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(5deg) rotateZ(.6deg) scale(1.02)"},
-       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(180px) rotateY(16deg) rotateZ(2deg) scale(.92)"}
-     ],{duration:275,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
-     ripOut.onfinish=()=>{
+     // BEAT 3: second white tornado/rip rapidly grabs the logo and tears it away.
+     const tearOut=flash.animate([
+       {offset:0,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"},
+       {offset:.22,transform:"translate3d(-5%,5%,0) rotate(-4deg) scale(1.06)"},
+       {offset:.48,transform:"translate3d(-20%,20%,0) rotate(-10deg) scale(.92)"},
+       {offset:.72,transform:"translate3d(-46%,46%,0) rotate(-17deg) scale(.68)"},
+       {offset:1,transform:"translate3d(-82%,82%,0) rotate(-24deg) scale(.34)"}
+     ],{duration:155,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
+     if(mark){
+       mark.animate([
+         {offset:0,transform:"translate3d(-50%,-50%,0) scale(1.08)"},
+         {offset:.35,transform:"translate3d(-50%,-50%,0) scale(1.12)"},
+         {offset:1,transform:"translate3d(-50%,-50%,0) scale(.78)"}
+       ],{duration:155,easing:"ease-in",fill:"forwards"});
+     }
+     tearOut.onfinish=()=>{
        flash.style.display="none";
        el.dataset.busy="0";
        const pending=el.dataset.pending;
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
-   },70);
+   },390);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
