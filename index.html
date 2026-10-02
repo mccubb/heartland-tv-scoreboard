@@ -32,13 +32,30 @@ function setScore(el,val){
  const cur=el.querySelector(".score-current"),flash=el.querySelector(".score-flash");
  const next=String(val);
  if(cur.textContent===next)return;
- if(el.dataset.busy==="1"){cur.textContent=next;return}
- el.dataset.busy="1";el.classList.add("animating");flash.style.display="flex";
- flash.getAnimations().forEach(a=>a.cancel());cur.getAnimations().forEach(a=>a.cancel());
- const flashIn=flash.animate([{opacity:0,transform:"scaleX(.05)"},{opacity:1,transform:"scaleX(1)",offset:.32},{opacity:1,transform:"scaleX(1)",offset:.68},{opacity:0,transform:"scaleX(.08)"}],{duration:900,easing:"ease-in-out",fill:"forwards"});
- cur.animate([{opacity:1},{opacity:0,offset:.25},{opacity:0,offset:.68},{opacity:1}],{duration:900,easing:"ease-in-out",fill:"forwards"});
- setTimeout(()=>{cur.textContent=next},430);
- flashIn.onfinish=()=>{flash.style.opacity="0";flash.style.display="none";cur.style.opacity="1";el.dataset.busy="0";el.classList.remove("animating")};
+ if(el.dataset.busy==="1"){el.dataset.pending=next;return}
+ el.dataset.busy="1";
+ const old=cur.textContent;
+ cur.textContent=next;
+ flash.style.display="flex";
+ flash.style.opacity="1";
+
+ const frames=[
+  {offset:0,clipPath:"polygon(100% 0,100% 100%,100% 100%,100% 0)"},
+  {offset:.16,clipPath:"polygon(72% 0,100% 0,100% 100%,65% 100%,70% 82%,63% 67%,71% 51%,64% 34%,72% 18%)"},
+  {offset:.34,clipPath:"polygon(39% 0,100% 0,100% 100%,31% 100%,37% 84%,29% 68%,38% 51%,30% 35%,40% 18%)"},
+  {offset:.50,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
+  {offset:.66,clipPath:"polygon(0 0,72% 0,64% 18%,71% 35%,63% 51%,70% 68%,62% 84%,68% 100%,0 100%)"},
+  {offset:.84,clipPath:"polygon(0 0,38% 0,30% 18%,37% 35%,29% 51%,36% 68%,28% 84%,34% 100%,0 100%)"},
+  {offset:1,clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
+ ];
+ const anim=flash.animate(frames,{duration:1050,easing:"cubic-bezier(.55,.02,.35,.98)",fill:"forwards"});
+ anim.onfinish=()=>{
+   flash.style.display="none";
+   flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
+   el.dataset.busy="0";
+   const pending=el.dataset.pending;
+   if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
+ };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
 draw();setInterval(draw,200);window.addEventListener("storage",draw);
