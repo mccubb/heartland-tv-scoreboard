@@ -1,58 +1,19 @@
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Heartland Basketball Scoreboard</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland Basketball Scoreboard</title>
 <style>
-:root{--heartland:#1668a8;--plaza:#8d2635;--black:#151719;--white:#f7f7f5}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:Arial,Helvetica,sans-serif}
-#stage{position:relative;width:100vw;height:100vh}
-#bug{position:absolute;left:50%;bottom:5.2%;transform:translateX(-50%);height:86px;display:flex;filter:drop-shadow(0 3px 3px rgba(0,0,0,.32));white-space:nowrap}
-.team{height:86px;display:flex;align-items:stretch}
-.teamInfo{height:86px;width:290px;display:flex;align-items:center;padding:0 24px}
-.teamName{font-size:25px;line-height:1;font-weight:900;letter-spacing:.4px}
-.home .teamInfo{background:var(--heartland);color:white;border-radius:3px 0 0 3px;justify-content:flex-end}
-.away .teamInfo{background:var(--white);color:var(--plaza);border-radius:0 3px 3px 0;justify-content:flex-start}
-.score{height:86px;width:90px;display:flex;align-items:center;justify-content:center;font-size:53px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}
-.home .score{background:var(--heartland);color:white}
-.away .score{background:var(--white);color:var(--plaza)}
-.center{height:86px;width:126px;background:var(--black);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.clock{font-size:30px;line-height:31px;font-weight:900;font-variant-numeric:tabular-nums}
-.bottom{display:flex;align-items:center;justify-content:center;gap:11px;margin-top:5px}
-.shot{font-size:19px;font-weight:900;color:#e5df4d;font-variant-numeric:tabular-nums}
-.period{font-size:18px;font-weight:900}
-@media(max-width:900px){
-#bug{height:68px}.team,.teamInfo,.score,.center{height:68px}
-.teamInfo{width:210px;padding:0 16px}.teamName{font-size:19px}.score{width:68px;font-size:41px}
-.center{width:101px}.clock{font-size:24px;line-height:25px}.shot{font-size:15px}.period{font-size:14px}.bottom{gap:8px;margin-top:3px}
-}
-</style>
-</head>
-<body>
-<div id="stage">
-  <div id="bug">
-    <div class="team home">
-      <div class="teamInfo"><div class="teamName" id="homeName">HEARTLAND</div></div>
-      <div class="score" id="homeScore">0</div>
-    </div>
-    <div class="center">
-      <div class="clock" id="clock">8:00</div>
-      <div class="bottom"><span class="shot" id="shot">30</span><span class="period" id="period">1ST</span></div>
-    </div>
-    <div class="team away">
-      <div class="score" id="awayScore">0</div>
-      <div class="teamInfo"><div class="teamName" id="awayName">PLAZA HEIGHTS</div></div>
-    </div>
-  </div>
-</div>
+:root{--heartland:#1746B0;--plaza:#8d2635;--black:#151719;--white:#f7f7f5}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:Arial,Helvetica,sans-serif}
+#stage{position:relative;width:100vw;height:100vh}#bug{position:absolute;left:50%;bottom:5.2%;transform:translateX(-50%);height:86px;display:flex;filter:drop-shadow(0 3px 3px rgba(0,0,0,.32));white-space:nowrap}
+.team{height:86px;display:flex;align-items:stretch}.teamInfo{height:86px;width:290px;display:flex;align-items:center;padding:0 24px}.teamName{font-size:25px;line-height:1;font-weight:900;letter-spacing:.4px}
+.home .teamInfo{background:var(--heartland);color:#fff;border-radius:3px 0 0 3px;justify-content:flex-end}.away .teamInfo{background:var(--white);color:var(--plaza);border-radius:0 3px 3px 0;justify-content:flex-start}
+.score{height:86px;width:90px;display:flex;align-items:center;justify-content:center;font-size:53px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}.home .score{background:var(--heartland);color:#fff}.away .score{background:var(--white);color:var(--plaza)}
+.center{height:86px;width:126px;background:var(--black);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}.clock{font-size:31px;line-height:32px;font-weight:900;font-variant-numeric:tabular-nums}.period{font-size:18px;line-height:19px;font-weight:900;margin-top:6px}
+@media(max-width:900px){#bug{height:68px}.team,.teamInfo,.score,.center{height:68px}.teamInfo{width:210px;padding:0 16px}.teamName{font-size:19px}.score{width:68px;font-size:41px}.center{width:101px}.clock{font-size:24px;line-height:25px}.period{font-size:14px;margin-top:4px}}
+</style></head><body><div id="stage"><div id="bug"><div class="team home"><div class="teamInfo"><div class="teamName" id="homeName">HEARTLAND</div></div><div class="score" id="homeScore">0</div></div><div class="center"><div class="clock" id="clock">8:00</div><div class="period" id="period">1ST</div></div><div class="team away"><div class="score" id="awayScore">0</div><div class="teamInfo"><div class="teamName" id="awayName">PLAZA HEIGHTS</div></div></div></div></div>
 <script>
-const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awayScore:0,period:1,seconds:480,shot:30,running:false,stamp:Date.now()};
+const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awayScore:0,period:1,seconds:480,running:false,stamp:Date.now()};
 function read(){try{return {...defaults,...JSON.parse(localStorage.getItem("htv-score")||"{}")}}catch(e){return {...defaults}}}
 function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":n===5?"OT":n+"OT"}
 function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);if(s.seconds===0)s.running=false}return s}
-function draw(){const s=stateNow();homeName.textContent=s.homeName||"HEARTLAND";awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");homeScore.textContent=s.homeScore;awayScore.textContent=s.awayScore;period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0");shot.textContent=s.shot??30}
+function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");homeScore.textContent=s.homeScore;awayScore.textContent=s.awayScore;period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
 draw();setInterval(draw,200);window.addEventListener("storage",draw);
-</script>
-</body></html>
+</script></body></html>
