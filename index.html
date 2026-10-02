@@ -34,28 +34,38 @@ function setScore(el,val){
  if(cur.textContent===next)return;
  if(el.dataset.busy==="1"){el.dataset.pending=next;return}
  el.dataset.busy="1";
- const old=cur.textContent;
- cur.textContent=next;
  flash.style.display="flex";
  flash.style.opacity="1";
+ flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
 
- const frames=[
-  {offset:0,clipPath:"polygon(100% 0,100% 100%,100% 100%,100% 0)"},
-  {offset:.18,clipPath:"polygon(78% 0,100% 0,100% 100%,73% 100%,79% 84%,72% 67%,80% 51%,73% 34%,79% 17%)"},
-  {offset:.38,clipPath:"polygon(48% 0,100% 0,100% 100%,42% 100%,49% 84%,41% 67%,50% 51%,42% 34%,48% 17%)"},
-  {offset:.60,clipPath:"polygon(13% 0,100% 0,100% 100%,7% 100%,14% 84%,6% 67%,15% 51%,7% 34%,13% 17%)"},
-  {offset:.72,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
-  {offset:.82,clipPath:"polygon(0 0,72% 0,66% 17%,73% 34%,65% 51%,72% 67%,64% 84%,70% 100%,0 100%)"},
-  {offset:.92,clipPath:"polygon(0 0,38% 0,32% 17%,39% 34%,31% 51%,38% 67%,30% 84%,36% 100%,0 100%)"},
-  {offset:1,clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
+ const coverFrames=[
+  {clipPath:"polygon(100% 0,100% 100%,100% 100%,100% 0)"},
+  {offset:.25,clipPath:"polygon(78% 0,100% 0,100% 100%,72% 100%,79% 82%,71% 66%,80% 50%,72% 33%,79% 16%)"},
+  {offset:.5,clipPath:"polygon(49% 0,100% 0,100% 100%,42% 100%,50% 82%,41% 66%,51% 50%,42% 33%,49% 16%)"},
+  {offset:.75,clipPath:"polygon(20% 0,100% 0,100% 100%,13% 100%,21% 82%,12% 66%,22% 50%,13% 33%,20% 16%)"},
+  {clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
  ];
- const anim=flash.animate(frames,{duration:1350,easing:"cubic-bezier(.48,.04,.28,1)",fill:"forwards"});
- anim.onfinish=()=>{
-   flash.style.display="none";
-   flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
-   el.dataset.busy="0";
-   const pending=el.dataset.pending;
-   if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
+ const cover=flash.animate(coverFrames,{duration:800,easing:"cubic-bezier(.45,.02,.25,1)",fill:"forwards"});
+ cover.onfinish=()=>{
+   // Score changes only while the white layer completely hides it.
+   cur.textContent=next;
+   setTimeout(()=>{
+     const revealFrames=[
+       {clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
+       {offset:.25,clipPath:"polygon(0 0,79% 0,72% 16%,80% 33%,71% 50%,79% 66%,71% 82%,78% 100%,0 100%)"},
+       {offset:.5,clipPath:"polygon(0 0,50% 0,42% 16%,51% 33%,41% 50%,50% 66%,41% 82%,49% 100%,0 100%)"},
+       {offset:.75,clipPath:"polygon(0 0,21% 0,13% 16%,22% 33%,12% 50%,21% 66%,12% 82%,20% 100%,0 100%)"},
+       {clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
+     ];
+     const reveal=flash.animate(revealFrames,{duration:800,easing:"cubic-bezier(.45,.02,.25,1)",fill:"forwards"});
+     reveal.onfinish=()=>{
+       flash.style.display="none";
+       flash.style.clipPath="polygon(100% 0,100% 100%,100% 100%,100% 0)";
+       el.dataset.busy="0";
+       const pending=el.dataset.pending;
+       if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
+     };
+   },220);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
