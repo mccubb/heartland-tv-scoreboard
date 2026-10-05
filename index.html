@@ -131,7 +131,7 @@ async function setScore(el,val,force=false){
  function render(progress,erase,now){drawPanel(now);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();paintMask(ctx,w,h,progress,erase,erase?leave:enter);ctx.drawImage(panel,0,0,w,h);ctx.restore()}
  function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?350:360;function frame(now){const t=Math.min(1,(now-start)/duration);render(brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
  await sweep(false);cur.textContent=next;
- await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if(now-start<1210)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
+ await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if(now-start<900)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
  await sweep(true);canvas.style.display='none';el.dataset.busy='0';
  const pending=el.dataset.pending;delete el.dataset.pending;if(pending!==undefined&&pending!==cur.textContent)setScore(el,pending);
 }
