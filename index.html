@@ -21,7 +21,7 @@
 @keyframes newScore{0%{opacity:0;transform:scale(1.025)}30%{opacity:.18}58%{opacity:.7}100%{opacity:1;transform:scale(1)}}
 .home .score,.home #homeScore{background:#0A0674!important;}
 .score-flash{position:absolute;left:-30%;top:-30%;width:160%;height:160%;background:#fff!important;display:none;align-items:center;justify-content:center;z-index:50;overflow:hidden;pointer-events:none;opacity:1;backface-visibility:hidden;transform:translate3d(72%,-72%,0) rotate(18deg) scale(.42);transform-origin:50% 50%;will-change:transform,opacity;contain:paint;clip-path:polygon(8% 0,100% 0,100% 92%,92% 100%,0 100%,5% 88%,0 79%,8% 70%,1% 61%,10% 52%,2% 43%,11% 34%,3% 25%,12% 16%,5% 8%)}
-.homeflash{background:#FFFFFF!important;} .awayflash{background:#FFFFFF!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:51%;width:82%!important;height:82%!important;transform:translate3d(-50%,-50%,0) perspective(240px) rotateX(7deg) rotateY(-9deg) scale(.86);transform-origin:50% 50%;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:#fff!important;opacity:1!important;filter:drop-shadow(0 7px 5px rgba(0,0,0,.30)) drop-shadow(0 2px 1px rgba(0,0,0,.18));mix-blend-mode:normal!important;will-change:transform;backface-visibility:hidden;image-rendering:auto}
+.homeflash{background:#0A0674!important;} .awayflash{background:#8B2635!important;} .score-flash .hcs-logo{display:block;position:absolute;left:50%;top:51%;width:82%!important;height:82%!important;transform:translate3d(-50%,-50%,0) perspective(240px) rotateX(7deg) rotateY(-9deg) scale(.86);transform-origin:50% 50%;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center!important;background:transparent!important;opacity:1!important;filter:drop-shadow(0 7px 5px rgba(0,0,0,.30)) drop-shadow(0 2px 1px rgba(0,0,0,.18));mix-blend-mode:normal!important;will-change:transform;backface-visibility:hidden;image-rendering:auto}
 .score-flash .phmark{display:block;position:absolute;left:50%;top:50%;transform:translate3d(-50%,-50%,0) perspective(240px) rotateX(7deg) rotateY(-9deg) scale(.86);transform-origin:50% 50%;font-size:50px;line-height:1;font-weight:900;color:#8B2635;opacity:1;text-shadow:0 7px 5px rgba(0,0,0,.30),0 2px 1px rgba(0,0,0,.18);will-change:transform;backface-visibility:hidden}
 
 .tear-curtain{position:absolute;inset:0;z-index:70;pointer-events:none;display:none;overflow:hidden;background:#fff;will-change:clip-path}
@@ -45,80 +45,58 @@ function setScore(el,val){
  if(cur.textContent===next)return;
  if(el.dataset.busy==="1"){el.dataset.pending=next;return}
  el.dataset.busy="1";
+
  flash.getAnimations().forEach(a=>a.cancel());
  if(mark) mark.getAnimations().forEach(a=>a.cancel());
- flash.style.display="none";
+ if(curtain) curtain.style.display="none";
+
+ // Keep the animation exactly inside the score box.
+ flash.style.display="flex";
+ flash.style.left="0";
+ flash.style.top="0";
+ flash.style.width="100%";
+ flash.style.height="100%";
+ flash.style.transform="none";
  flash.style.opacity="1";
- if(curtain){
-   curtain.style.display="block";
-   const sheet=curtain.animate([
-     {offset:0,clipPath:"polygon(100% 0,100% 0,100% 0)"},
-     {offset:.18,clipPath:"polygon(82% 0,100% 0,100% 24%,96% 20%,92% 27%,88% 22%,84% 31%,80% 26%)"},
-     {offset:.38,clipPath:"polygon(58% 0,100% 0,100% 50%,96% 45%,91% 54%,86% 48%,81% 59%,75% 52%,70% 64%,64% 57%,59% 69%,53% 62%)"},
-     {offset:.62,clipPath:"polygon(30% 0,100% 0,100% 78%,95% 71%,90% 82%,84% 75%,78% 88%,71% 80%,64% 94%,57% 86%,50% 100%,0 100%,0 31%,7% 35%,12% 27%,18% 33%,23% 22%)"},
-     {offset:.82,clipPath:"polygon(8% 0,100% 0,100% 100%,0 100%,0 8%,5% 12%)"},
-     {offset:1,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
-   ],{duration:175,easing:"cubic-bezier(.18,.72,.2,1)",fill:"forwards"});
-   sheet.onfinish=()=>{};
+
+ // Reference: rough/scratched edge travels RIGHT -> LEFT, replacing score with logo panel.
+ const scratchIn=flash.animate([
+   {offset:0,clipPath:"polygon(100% 0,100% 0,100% 100%,100% 100%)"},
+   {offset:.18,clipPath:"polygon(84% 0,100% 0,100% 100%,88% 100%,91% 90%,84% 82%,90% 72%,83% 61%,89% 50%,82% 39%,88% 28%,81% 17%,86% 8%)"},
+   {offset:.40,clipPath:"polygon(62% 0,100% 0,100% 100%,66% 100%,70% 91%,61% 82%,68% 72%,60% 62%,67% 52%,59% 42%,66% 32%,58% 21%,65% 10%)"},
+   {offset:.64,clipPath:"polygon(38% 0,100% 0,100% 100%,43% 100%,47% 91%,37% 82%,45% 72%,36% 62%,44% 52%,35% 42%,43% 32%,34% 21%,41% 10%)"},
+   {offset:.84,clipPath:"polygon(17% 0,100% 0,100% 100%,22% 100%,26% 91%,16% 82%,24% 72%,15% 62%,23% 52%,14% 42%,22% 32%,13% 21%,20% 10%)"},
+   {offset:1,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"}
+ ],{duration:165,easing:"linear",fill:"forwards"});
+
+ if(mark){
+   mark.animate([
+     {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) scale(.98)"},
+     {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) scale(1.06)"}
+   ],{duration:165,easing:"ease-out",fill:"forwards"});
  }
 
- // BEAT 1: very fast diagonal rip/tornado into the score box.
- const tearIn=flash.animate([
-   {offset:0,transform:"translate3d(92%,-92%,0) rotate(27deg) scale(.24)"},
-   {offset:.22,transform:"translate3d(55%,-55%,0) rotate(18deg) scale(.48)"},
-   {offset:.52,transform:"translate3d(20%,-20%,0) rotate(9deg) scale(.76)"},
-   {offset:.78,transform:"translate3d(2%,-2%,0) rotate(2deg) scale(.98)"},
-   {offset:1,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"}
- ],{duration:175,easing:"cubic-bezier(.12,.75,.18,1)",fill:"forwards"});
-
- tearIn.onfinish=()=>{
-   // Rake/erase is complete. Hold a completely clean white score box first.
+ scratchIn.onfinish=()=>{
+   // New score changes while fully covered by logo panel.
    cur.textContent=next;
-   if(curtain){
-     curtain.style.background="#fff";
-     curtain.style.clipPath="inset(0)";
-   }
-   setTimeout(()=>{
-     // Remove the rake layer first, then reveal the logo on the next paint.
-     // This prevents a leftover white rake streak from flashing across the horse.
-     if(curtain) curtain.style.display="none";
-     requestAnimationFrame(()=>{
-       flash.style.display="flex";
-       if(mark){
-       mark.animate([
-       {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(2deg) rotateY(-2deg) scale(1.08)"},
-       {offset:.58,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.18)"},
-       {offset:.82,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-1deg) rotateY(1deg) scale(1.22)"},
-       {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.19)"}
-     ],{duration:300,easing:"cubic-bezier(.16,.58,.22,1)",fill:"forwards"});
-       }
-     });
 
    setTimeout(()=>{
-     // BEAT 3: second white tornado/rip rapidly grabs the logo and tears it away.
-     const tearOut=flash.animate([
-       {offset:0,transform:"translate3d(0,0,0) rotate(0deg) scale(1)"},
-       {offset:.18,transform:"translate3d(-4%,4%,0) rotate(-3deg) scale(1.07)"},
-       {offset:.42,transform:"translate3d(-18%,18%,0) rotate(-9deg) scale(.98)"},
-       {offset:.68,transform:"translate3d(-48%,48%,0) rotate(-18deg) scale(.72)"},
-       {offset:.88,transform:"translate3d(-78%,78%,0) rotate(-26deg) scale(.46)"},
-       {offset:1,transform:"translate3d(-104%,104%,0) rotate(-31deg) scale(.25)"}
-     ],{duration:185,easing:"cubic-bezier(.34,0,.2,1)",fill:"forwards"});
-     if(mark){
-       mark.animate([
-         {offset:0,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(0deg) rotateY(0deg) scale(1.19)"},
-         {offset:.35,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(-2deg) rotateY(3deg) scale(1.23)"},
-         {offset:1,transform:"translate3d(-50%,-50%,0) perspective(240px) rotateX(6deg) rotateY(10deg) scale(.90)"}
-       ],{duration:185,easing:"ease-in",fill:"forwards"});
-     }
-     tearOut.onfinish=()=>{
+     // Reference: second scratch also starts on RIGHT and erases logo RIGHT -> LEFT.
+     const scratchOut=flash.animate([
+       {offset:0,clipPath:"polygon(0 0,100% 0,100% 100%,0 100%)"},
+       {offset:.18,clipPath:"polygon(0 0,84% 0,88% 9%,81% 18%,89% 28%,82% 39%,90% 50%,83% 61%,91% 72%,84% 82%,90% 91%,85% 100%,0 100%)"},
+       {offset:.40,clipPath:"polygon(0 0,62% 0,67% 10%,58% 21%,66% 32%,59% 42%,67% 52%,60% 62%,68% 72%,61% 82%,70% 91%,65% 100%,0 100%)"},
+       {offset:.64,clipPath:"polygon(0 0,38% 0,43% 10%,34% 21%,43% 32%,35% 42%,44% 52%,36% 62%,45% 72%,37% 82%,47% 91%,42% 100%,0 100%)"},
+       {offset:.84,clipPath:"polygon(0 0,17% 0,22% 10%,13% 21%,22% 32%,14% 42%,23% 52%,15% 62%,24% 72%,16% 82%,26% 91%,21% 100%,0 100%)"},
+       {offset:1,clipPath:"polygon(0 0,0 0,0 100%,0 100%)"}
+     ],{duration:165,easing:"linear",fill:"forwards"});
+     scratchOut.onfinish=()=>{
        flash.style.display="none";
        el.dataset.busy="0";
        const pending=el.dataset.pending;
        if(pending!==undefined){delete el.dataset.pending;if(pending!==cur.textContent)setScore(el,pending)}
      };
-   },300);
-   },110);
+   },210);
  };
 }
 function draw(){const s=stateNow();homeName.textContent=s.homeName==="HCS"?"HEARTLAND":(s.homeName||"HEARTLAND");awayName.textContent=s.awayName==="GUEST"?"PLAZA HEIGHTS":(s.awayName||"PLAZA HEIGHTS");setScore(homeScore,s.homeScore);setScore(awayScore,s.awayScore);period.textContent=ord(s.period);let m=Math.floor(s.seconds/60),q=s.seconds%60;clock.textContent=m+":"+String(q).padStart(2,"0")}
