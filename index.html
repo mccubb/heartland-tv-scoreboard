@@ -120,7 +120,7 @@ async function setScore(el,val,force=false){
   pc.drawImage(depth,-w*.5+2,-h*.5+2.4,w,h);pc.shadowColor='transparent';
   pc.drawImage(face,-w*.5,-h*.5,w,h);pc.restore();
  }
- const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now(),animationSpeed=1.10;
+ const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now(),animationSpeed=0.90;
 
  function drawPanel(now){
   pc.clearRect(0,0,w,h);pc.fillStyle=brand.panel;pc.fillRect(0,0,w,h);
