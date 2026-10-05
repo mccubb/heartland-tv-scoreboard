@@ -112,7 +112,7 @@ async function setScore(el,val,force=false){
  const dc=depth.getContext('2d');dc.drawImage(face,0,0);dc.globalCompositeOperation='source-in';dc.fillStyle=home?'#333542':'#242029';dc.fillRect(0,0,depth.width,depth.height);
  function drawEmblem(elapsed){
   // Gently approach the viewer and lift away as the brush comes around.
-  const growth=Math.max(0,Math.min(1,(elapsed-120)/610));
+  const growth=Math.max(0,Math.min(1,(elapsed-120)/900));
   const ease=growth*growth*(3-2*growth);
   const size=.93+.06*ease,lift=h*.027*ease;
   pc.save();pc.translate(w*.5,h*.5-lift);pc.scale(size,size);
@@ -123,15 +123,15 @@ async function setScore(el,val,force=false){
  const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now();
  function drawPanel(now){
   pc.clearRect(0,0,w,h);pc.fillStyle=brand.panel;pc.fillRect(0,0,w,h);
-  const phase=Math.max(0,Math.min(1,(now-animationStart-185)/430));
+  const phase=Math.max(0,Math.min(1,(now-animationStart-240)/600));
   drawOrbit(pc,w,h,phase,home,false);
   drawEmblem(now-animationStart);
   drawOrbit(pc,w,h,phase,home,true);
  }
  function render(progress,erase,now){drawPanel(now);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();paintMask(ctx,w,h,progress,erase,erase?leave:enter);ctx.drawImage(panel,0,0,w,h);ctx.restore()}
- function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?230:280;function frame(now){const t=Math.min(1,(now-start)/duration);render(erase?t*t*(3-2*t):brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
+ function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?350:360;function frame(now){const t=Math.min(1,(now-start)/duration);render(brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
  await sweep(false);cur.textContent=next;
- await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if(now-start<210)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
+ await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if(now-start<1210)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
  await sweep(true);canvas.style.display='none';el.dataset.busy='0';
  const pending=el.dataset.pending;delete el.dataset.pending;if(pending!==undefined&&pending!==cur.textContent)setScore(el,pending);
 }
