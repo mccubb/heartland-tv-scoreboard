@@ -103,9 +103,11 @@ async function setScore(el,val){
  const depth=document.createElement('canvas');depth.width=canvas.width;depth.height=canvas.height;
  const dc=depth.getContext('2d');dc.drawImage(face,0,0);dc.globalCompositeOperation='source-in';dc.fillStyle=home?'#333542':'#242029';dc.fillRect(0,0,depth.width,depth.height);
  function drawEmblem(elapsed){
-  const growth=Math.max(0,Math.min(1,(elapsed-400)/330));
-  const size=.94+.05*(growth*growth*(3-2*growth));
-  pc.save();pc.translate(w*.5,h*.5);pc.scale(size,size);
+  // Gently approach the viewer and lift away as the brush comes around.
+  const growth=Math.max(0,Math.min(1,(elapsed-120)/610));
+  const ease=growth*growth*(3-2*growth);
+  const size=.93+.06*ease,lift=h*.027*ease;
+  pc.save();pc.translate(w*.5,h*.5-lift);pc.scale(size,size);
   pc.shadowColor='rgba(0,0,0,.25)';pc.shadowBlur=2;pc.shadowOffsetY=2;
   pc.drawImage(depth,-w*.5+2,-h*.5+2.4,w,h);pc.shadowColor='transparent';
   pc.drawImage(face,-w*.5,-h*.5,w,h);pc.restore();
