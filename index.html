@@ -43,21 +43,39 @@ function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.st
 let brushSequence=0;
 function makeBristles(height,seed){
  let n=seed>>>0;const random=()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296};
- const strokes=[];let y=0;
- while(y<height){const h=.35+random()*3.6;
-  strokes.push({y,h,reach:(random()-.5)*48,speed:.8+random()*.4,tip:1+random()*9});y+=h;
+ const strokes=[];let y=0,clump=0;
+ while(y<height){const band=.45+Math.pow(random(),1.5)*5.5;
+  clump=clump*.55+(random()-.5)*27;
+  strokes.push({y,h:band,reach:clump+(random()-.5)*19,delay:(y/height)*.13+random()*.028,tip:2+random()*12});y+=band;
  }return strokes;
+}
+function brushTiming(t){
+ // A small corner peeks in, eases almost to a stop, then commits to the stroke.
+ if(t<.23)return .07*(1-Math.pow(1-t/.23,2));
+ if(t<.34)return .07+.008*(t-.23)/.11;
+ const q=(t-.34)/.66;return .078+.922*(q*q*(3-2*q));
 }
 function paintMask(ctx,w,h,progress,erase,strokes){
  ctx.beginPath();
  for(const b of strokes){
-  const travel=progress*(w+100)*b.speed;
-  const edge=progress===0?w+30:progress===1?-30:w+45-travel+b.reach;
-  const x=Math.max(-30,Math.min(w+30,edge));
-  if(erase){ctx.moveTo(0,b.y);ctx.lineTo(x+b.tip,b.y);ctx.lineTo(x,b.y+b.h*.34);ctx.lineTo(x+b.tip*.45,b.y+b.h);ctx.lineTo(0,b.y+b.h+.2)}
-  else{ctx.moveTo(w,b.y);ctx.lineTo(x+b.tip,b.y);ctx.lineTo(x,b.y+b.h*.34);ctx.lineTo(x+b.tip*.45,b.y+b.h);ctx.lineTo(w,b.y+b.h+.2)}
-  ctx.closePath();
+  const q=Math.max(0,Math.min(1,(progress-b.delay)/(1-b.delay)));
+  const rough=Math.sin(Math.PI*q),x=w*(1-q)+b.reach*rough,tip=b.tip*rough;
+  const side=erase?0:w;
+  ctx.moveTo(side,b.y);ctx.lineTo(x+tip*.5,b.y);ctx.lineTo(x-tip,b.y+b.h*.24);
+  ctx.lineTo(x-tip*.28,b.y+b.h*.43);ctx.lineTo(x-tip*.8,b.y+b.h*.71);ctx.lineTo(x+tip*.34,b.y+b.h+.15);ctx.lineTo(side,b.y+b.h+.15);ctx.closePath();
  }ctx.clip();
+}
+function drawOrbit(ctx,w,h,phase,home,front){
+ // A tapered ribbon travels on a tilted ellipse; its rear half passes behind the logo.
+ const head=phase*Math.PI*2-Math.PI*.7,tail=1.65;
+ ctx.save();ctx.translate(w*.5,h*.57);ctx.rotate(-.22);
+ for(let i=0;i<50;i++){
+  const f=i/49,angle=head-tail*(1-f),next=angle+tail/49;
+  if((Math.sin(angle)>0)!==front)continue;
+  ctx.beginPath();ctx.ellipse(0,0,w*.43,h*.18,0,angle,next);
+  ctx.lineWidth=(.35+Math.sin(f*Math.PI*.78)*h*.052)*(front?1:.55);
+  ctx.strokeStyle=home?'rgba(12,17,37,'+(.1+f*.64)+')':'rgba(25,9,18,'+(.12+f*.65)+')';ctx.lineCap='round';ctx.stroke();
+ }ctx.restore();
 }
 async function setScore(el,val){
  const cur=el.querySelector('.score-current'),next=String(val);
@@ -71,14 +89,20 @@ async function setScore(el,val){
  const w=el.clientWidth,h=el.clientHeight,dpr=Math.max(2,window.devicePixelRatio||1);
  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.display='block';
  const ctx=canvas.getContext('2d'),panel=document.createElement('canvas');panel.width=canvas.width;panel.height=canvas.height;
- const pc=panel.getContext('2d');pc.scale(dpr,dpr);pc.fillStyle=home?'#FFFFFF':'#8B2635';pc.fillRect(0,0,w,h);
- if(home){const scale=Math.min(w/logo.naturalWidth,h/logo.naturalHeight);const lw=logo.naturalWidth*scale,lh=logo.naturalHeight*scale;pc.drawImage(logo,(w-lw)/2,(h-lh)/2,lw,lh)}
- else{pc.fillStyle='#FFFFFF';pc.font='900 '+Math.round(h*.68)+'px Arial';pc.textAlign='center';pc.textBaseline='middle';pc.fillText('P',w/2,h/2+2)}
- const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729);
- function render(progress,erase){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();paintMask(ctx,w,h,progress,erase,erase?leave:enter);ctx.drawImage(panel,0,0,w,h);ctx.restore()}
- function sweep(erase){return new Promise(resolve=>{const start=performance.now();function frame(now){const p=Math.min(1,(now-start)/190);render(p,erase);if(p<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
+ const pc=panel.getContext('2d');pc.scale(dpr,dpr);
+ const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now();
+ function drawPanel(now){
+  pc.clearRect(0,0,w,h);pc.fillStyle=home?'#FFFFFF':'#8B2635';pc.fillRect(0,0,w,h);
+  const phase=(now-animationStart)/610;
+  drawOrbit(pc,w,h,phase,home,false);
+  if(home){const scale=Math.min(w/logo.naturalWidth,h/logo.naturalHeight);const lw=logo.naturalWidth*scale,lh=logo.naturalHeight*scale;pc.drawImage(logo,(w-lw)/2,(h-lh)/2,lw,lh)}
+  else{pc.fillStyle='#FFFFFF';pc.font='900 '+Math.round(h*.68)+'px Arial';pc.textAlign='center';pc.textBaseline='middle';pc.fillText('P',w/2,h/2+2)}
+  drawOrbit(pc,w,h,phase,home,true);
+ }
+ function render(progress,erase,now){drawPanel(now);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();paintMask(ctx,w,h,progress,erase,erase?leave:enter);ctx.drawImage(panel,0,0,w,h);ctx.restore()}
+ function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?230:280;function frame(now){const t=Math.min(1,(now-start)/duration);render(erase?t*t*(3-2*t):brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
  await sweep(false);cur.textContent=next;
- await new Promise(resolve=>setTimeout(resolve,210));
+ await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if(now-start<210)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
  await sweep(true);canvas.style.display='none';el.dataset.busy='0';
  const pending=el.dataset.pending;delete el.dataset.pending;if(pending!==undefined&&pending!==cur.textContent)setScore(el,pending);
 }
