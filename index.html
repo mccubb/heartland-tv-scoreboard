@@ -42,7 +42,7 @@ function readBrand(){let stored={};try{stored=JSON.parse(localStorage.getItem('h
 
 const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awayScore:0,period:1,seconds:480,running:false,stamp:Date.now()};
 function read(){try{return {...defaults,...JSON.parse(localStorage.getItem("htv-score")||"{}")}}catch(e){return {...defaults}}}
-function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":n===5?"OT":n+"OT"}
+function ord(n){return n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":"OT"+(n-4)}
 function stateNow(){let s=read();if(s.running){let e=Math.floor((Date.now()-s.stamp)/1000);s.seconds=Math.max(0,s.seconds-e);if(s.seconds===0)s.running=false}return s}
 // Independently sized bristles form an irregular paint front, never a repeating comb.
 let brushSequence=0;
