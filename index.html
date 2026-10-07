@@ -120,7 +120,7 @@ async function setScore(el,val,force=false){
   pc.drawImage(depth,-w*.5+2,-h*.5+2.4,w,h);pc.shadowColor='transparent';
   pc.drawImage(face,-w*.5,-h*.5,w,h);pc.restore();
  }
- const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now(),animationSpeed=0.90;
+ const seed=++brushSequence*7919,enter=makeBristles(h,seed),leave=makeBristles(h,seed+104729),animationStart=performance.now(),animationSpeed=0.96;
 
  function drawPanel(now){
   pc.clearRect(0,0,w,h);pc.fillStyle=brand.panel;pc.fillRect(0,0,w,h);
@@ -130,7 +130,7 @@ async function setScore(el,val,force=false){
   drawOrbit(pc,w,h,phase,home,true,brand.swoosh);
  }
  function render(progress,erase,now){drawPanel(now);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();paintMask(ctx,w,h,progress,erase,erase?leave:enter);ctx.drawImage(panel,0,0,w,h);ctx.restore()}
- function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?315:325;function frame(now){const t=Math.min(1,(now-start)*animationSpeed/duration);render(brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
+ function sweep(erase){return new Promise(resolve=>{const start=performance.now(),duration=erase?315:325;function frame(now){const elapsed=now-start,creepDuration=duration*.34/.90;const t=Math.min(1,elapsed<creepDuration?elapsed*.90/duration:.34+(elapsed-creepDuration)*animationSpeed/duration);render(brushTiming(t),erase,now);if(t<1)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)})}
  await sweep(false);cur.textContent=next;
  await new Promise(resolve=>{const start=performance.now();function hold(now){render(1,false,now);if((now-animationStart)*animationSpeed<1040)requestAnimationFrame(hold);else resolve()}requestAnimationFrame(hold)});
  await sweep(true);canvas.style.display='none';el.dataset.busy='0';
