@@ -7,8 +7,8 @@ let candidates={},confirmed={};const video=byId('video'),overlay=byId('overlay')
 const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a',period:'#d7a9ff'};
 function status(text){byId('status').textContent=text}
 function store(){localStorage.setItem('htv-camera',JSON.stringify(config))}
-function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
-function format(key,value){return value===null?'—':key==='seconds'?Math.floor(value/60)+':'+String(value%60).padStart(2,'0'):String(value)}
+function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key==='period'){const ot=clean.match(/^OT([1-5])$/i);if(ot)return Number(ot[1])+4}if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
+function format(key,value){return value===null?'—':key==='seconds'?Math.floor(value/60)+':'+String(value%60).padStart(2,'0'):key==='period'&&value>4?'OT'+(value-4):String(value)}
 function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[])]}
 function ready(){return stream&&video.readyState>=2&&activeKeys().every(k=>config.regions[k])}
 function buttons(){byId('test').disabled=!ready()||busy||running;byId('start').disabled=!ready()||busy||running||!verified;byId('pause').disabled=!running;byId('apply').disabled=running||busy||!lastTest||!activeKeys().some(k=>lastTest[k]?.value!=null);byId('disconnect').disabled=!stream;byId('connect').disabled=busy||running}
