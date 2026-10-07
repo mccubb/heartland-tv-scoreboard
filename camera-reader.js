@@ -50,13 +50,18 @@ function readSevenSegment(image,key){
  }
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
- const runs=[];let start=-1,gap=0;const maxGap=Math.max(1,Math.round(height*.035));
+ let runs=[];let start=-1,gap=0;const maxGap=Math.max(1,Math.round(height*.035));
  for(let x=0;x<=w+maxGap;x++){if(x<w&&cols[x]>0){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){runs.push({left:start,right:x-gap});start=-1}}
+ // Tight, leaning digits can overlap in the column projection. Keep their
+ // separate connected shapes instead of merging "20" or "10" into one digit.
+ const tall=components.filter(c=>c.b-c.t+1>=height*.72&&c.points.some(n=>ink[n]));
+ const total=cols.reduce((a,v)=>a+v,0),covered=tall.reduce((a,c)=>a+c.points.filter(n=>ink[n]).length,0);
+ if(tall.length&&tall.length<=4&&covered>=total*.82)runs=tall.sort((a,b)=>a.l-b.l).map(c=>({left:c.l,right:c.r,points:new Set(c.points.filter(n=>ink[n]))}));
  const patterns=['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000','1111111','1111011'];
  // Order: top, upper right, lower right, bottom, lower left, upper left, middle.
  const regions=[[.22,0,.78,.17],[.7,.16,1,.43],[.7,.57,1,.86],[.22,.84,.78,1],[0,.57,.3,.86],[0,.16,.3,.43],[.22,.42,.78,.59]];
  let text='',confidence=100,digits=0,colons=0;
- for(const run of runs){if(colonX!==null&&run.left>colonX&&!colons){text+=':';colons++}let yt=h,yb=-1,area=0;for(let y=top;y<=bottom;y++)for(let x=run.left;x<=run.right;x++)if(ink[y*w+x]){yt=Math.min(yt,y);yb=Math.max(yb,y);area++}
+ for(const run of runs){const pixel=(x,y)=>run.points?run.points.has(y*w+x):ink[y*w+x];if(colonX!==null&&run.left>colonX&&!colons){text+=':';colons++}let yt=h,yb=-1,area=0;for(let y=top;y<=bottom;y++)for(let x=run.left;x<=run.right;x++)if(pixel(x,y)){yt=Math.min(yt,y);yb=Math.max(yb,y);area++}
   const dh=yb-yt+1,dw=run.right-run.left+1;if(area<height*.04)continue;
   if(dh<height*.72){if(key==='seconds'&&dh>height*.18&&dw<height*.3){text+=':';colons++;continue}return null}
   if(dw/dh<.24){text+='1';digits++;confidence=Math.min(confidence,92);continue}
@@ -65,7 +70,7 @@ function readSevenSegment(image,key){
   // Test modest lean angles; seven-segment fonts and camera perspective can
   // shift the lower bars sideways without changing the digit.
   for(let shear=-.32;shear<=.161;shear+=.04){let left=w,right=-w;const points=[];
-   for(let y=yt;y<=yb;y++)for(let x=run.left;x<=run.right;x++)if(ink[y*w+x]){const xx=x-shear*(y-yt);points.push([xx,y]);left=Math.min(left,xx);right=Math.max(right,xx)}
+   for(let y=yt;y<=yb;y++)for(let x=run.left;x<=run.right;x++)if(pixel(x,y)){const xx=x-shear*(y-yt);points.push([xx,y]);left=Math.min(left,xx);right=Math.max(right,xx)}
    const width=right-left+1;
    if(width/dh<.24){const upper=points.some(([,y])=>y<yt+dh*.35),lower=points.some(([,y])=>y>yt+dh*.65);if(upper&&lower)match={digit:1,quality:1,certainty:.9};continue}
    const coverage=regions.map(([x0,y0,x1,y1])=>{let on=0;for(const [x,y] of points)if(x>=left+x0*width&&x<left+x1*width&&y>=yt+y0*dh&&y<yt+y1*dh)on++;return Math.min(1,on/Math.max(1,(x1-x0)*width*(y1-y0)*dh))});
@@ -83,20 +88,39 @@ function readSevenSegment(image,key){
  const value=parseReading(key,text);return value===null?null:{value,text,confidence,method:'Seven-segment'};
 }
 
-async function scan(){if(!ready())throw Error('Connect a camera and mark both score areas first.');const w=config.reader==='text'?await engine():null,frame=document.createElement('canvas');frame.width=video.videoWidth;frame.height=video.videoHeight;frame.getContext('2d').drawImage(video,0,0);const result={};for(const key of activeKeys()){const image=crop(frame,config.regions[key]);const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
-if(config.reader==='segments')reading=readSevenSegment(image,key);
-else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
-const confidence=reading?.confidence||0;result[key]={value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
-byId(key+'Value').textContent=format(key,result[key].value);byId(key+'Note').textContent=result[key].value===null?(reading?'Uncertain: '+reading.text+' ('+Math.round(confidence)+'%)':'Seven-segment bars incomplete or unclear — keeping the last confirmed number'):reading.method+' · '+Math.round(confidence)+'% confidence';}return result}
-function stable(key,value,time){if(value===null){delete candidates[key];return false}const previous=candidates[key];let consistent=previous&&previous.value===value;if(key==='seconds'&&previous){const elapsed=Math.max(1,Math.ceil((time-previous.time)/1000));consistent=value<=previous.value&&previous.value-value<=elapsed+2}candidates[key]={value,time,count:consistent?(previous.count||1)+1:1};return candidates[key].count>=2}
+// A three-frame median suppresses compression noise and single-frame LED
+// flicker without blending old and new digit bars into a different number.
+function medianCrop(images){const c=images[1],x=c.getContext('2d'),data=images.map(im=>im.getContext('2d').getImageData(0,0,im.width,im.height));for(let i=0;i<data[1].data.length;i+=4)for(let channel=0;channel<3;channel++){const n=i+channel,a=data[0].data[n],b=data[1].data[n],d=data[2].data[n];data[1].data[n]=a+b+d-Math.min(a,b,d)-Math.max(a,b,d)}x.putImageData(data[1],0,0);return c}
+async function scan(){
+ if(!ready())throw Error('Connect a camera and mark both score areas first.');
+ const w=config.reader==='text'?await engine():null,frames=[];
+ for(let i=0;i<(config.reader==='segments'?3:1);i++){if(i)await new Promise(resolve=>setTimeout(resolve,50));if(!ready())throw Error('Camera disconnected.');const frame=document.createElement('canvas');frame.width=video.videoWidth;frame.height=video.videoHeight;frame.getContext('2d').drawImage(video,0,0);frames.push(frame)}
+ const result={};for(const key of activeKeys()){
+  const crops=frames.map(frame=>crop(frame,config.regions[key])),image=crops.length===3?medianCrop(crops):crops[0];
+  const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
+  if(config.reader==='segments')reading=readSevenSegment(image,key);
+  else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
+  const confidence=reading?.confidence||0;result[key]={value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
+  byId(key+'Value').textContent=format(key,result[key].value);byId(key+'Note').textContent=result[key].value===null?(reading?'Uncertain: '+reading.text+' ('+Math.round(confidence)+'%)':'Digit bars not confirmed in this sample — holding the last confirmed number'):reading.method+' · '+Math.round(confidence)+'% confidence';
+ }return result;
+}
+function stable(key,value,time){
+ const previous=candidates[key];
+ // An unclear sample should not erase good recent evidence.
+ if(value===null){if(previous&&time-previous.time>3000)delete candidates[key];return false}
+ if(key==='seconds'){const elapsed=previous?(time-previous.time)/1000:0,consistent=previous&&elapsed<=3&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=3}
+ const history=(previous?.history||[]).filter(r=>time-r.time<=3000);history.push({value,time});while(history.length>5)history.shift();const count=history.filter(r=>r.value===value).length;
+ candidates[key]={value,time,count,history};return count>=3;
+}
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
-function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(automatic&&key!=='seconds'&&Math.abs(value-state[key])>3){status('A large score change was held. Pause and verify it, then Apply this reading once.');continue}if(state[key]!==value){state[key]=value;changed=true}if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}return changed}
+function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(automatic&&key!=='seconds'&&Math.abs(value-state[key])>3&&candidates[key].count<4){status('Confirming the score difference with an extra reading…');continue}if(state[key]!==value){state[key]=value;changed=true}if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}return changed}
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().every(k=>result[k].value!==null);status(verified?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Some digit bars could not be confirmed. Check the crop previews and reader type, then test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
-async function start(){if(!verified||!ready()||busy)return;running=true;candidates={};const token=++generation;buttons();status('Automatic updates on. Confirming two readings…');while(running&&token===generation){busy=true;try{const result=await scan();if(!running||token!==generation)break;apply(result,true);if(activeKeys().some(k=>result[k].value===null))status('Reading uncertain — keeping the last confirmed numbers.')}catch(e){pause('Updates paused: '+e.message);break}finally{busy=false;buttons()}await new Promise(resolve=>setTimeout(resolve,350))}}
+async function start(){if(!verified||!ready()||busy)return;running=true;candidates={};const token=++generation;buttons();status('Automatic updates on. Confirming repeated readings…');while(running&&token===generation){busy=true;try{const result=await scan();if(!running||token!==generation)break;apply(result,true);if(activeKeys().some(k=>result[k].value===null))status('Automatic updates on — checking unclear samples and keeping confirmed numbers.');else if(activeKeys().every(k=>candidates[k]?.count>=3))status('Automatic updates on — scoreboard readings confirmed.')}catch(e){pause('Updates paused: '+e.message);break}finally{busy=false;buttons()}await new Promise(resolve=>setTimeout(resolve,350))}}
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
 for(const key of ['reader','polarity','confidence','clockEnabled']){const input=byId(key);if(key==='clockEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='clockEnabled'?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate()});
 buttons();
+
 
