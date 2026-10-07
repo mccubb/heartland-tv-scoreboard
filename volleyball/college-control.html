@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heartland TV Volleyball Control</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef1f4;color:#101820;font-family:Arial,Helvetica,sans-serif}.wrap{max-width:1000px;margin:auto;padding:24px}.head{background:#174f86;color:#fff;padding:18px 22px;border-radius:10px;margin-bottom:16px}.head b{font-size:22px}.links{margin:0 0 16px}.links a{color:#174f86}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 2px 8px #0001}h2{margin:0 0 12px;font-size:18px}label{display:block;font-size:14px;font-weight:700;margin:8px 0 4px}input,select{width:100%;padding:11px;font-size:17px;border:1px solid #cbd2d9;border-radius:7px}input[type=color]{height:44px;padding:3px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.score{font-size:48px;font-weight:900;text-align:center;margin:10px}.sets{font-size:24px;font-weight:900;text-align:center;margin:8px}.buttons{text-align:center}button{border:0;border-radius:7px;padding:12px 16px;margin:4px;font-size:16px;font-weight:800;cursor:pointer;background:#252a30;color:white}.blue{background:#174f86}.red{background:#9b2c2c}.wide{width:calc(100% - 8px)}details{border-top:1px solid #dce2e8;padding-top:10px;margin-top:10px}summary{cursor:pointer;font-weight:700;padding:7px 0}.logo-row{display:flex;align-items:center;gap:10px;margin-top:8px}.logo-row img{width:64px;height:64px;object-fit:contain;background:#e7eaee;border-radius:6px}.note{font-size:13px;color:#59636e;line-height:1.45}.match{grid-column:1/-1}.display-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:700px){.grid{grid-template-columns:1fr}.match{grid-column:auto}.display-grid,.pair{grid-template-columns:1fr 1fr}.wrap{padding:12px}}
+</style></head><body><div class="wrap">
+<div class="head"><b>HEARTLAND TV</b><br>College Volleyball Scoreboard Control</div>
+<p class="links"><a href="./college.html" target="_blank" rel="noopener">Open scoreboard</a> · <a href="./camera.html" target="_blank" rel="noopener">Open camera reader</a></p>
+<div class="grid">
+ <section class="card"><h2>Left team</h2>
+  <label>Team name<input id="homeName"></label><div class="pair"><label>Ranking<input id="homeRanking" placeholder="15"></label><label>Sets won<input id="homeSetsInput" type="number" min="0" max="5"></label></div>
+  <div class="score" id="homeScoreText">0</div><div class="buttons"><button onclick="points('home',-1)">−1</button><button class="blue" onclick="points('home',1)">+1 POINT</button></div>
+  <div class="sets">Sets: <span id="homeSetsText">0</span></div><div class="buttons"><button onclick="sets('home',-1)">−1 SET</button><button class="blue" onclick="sets('home',1)">+1 SET</button></div>
+  <details><summary>Team look &amp; logo</summary><div class="pair"><label>Team color<input id="homeBackground" type="color"></label><label>Text color<input id="homeText" type="color"></label></div><label>Logo<input id="homeFile" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="logo-row"><img id="homePreview" hidden><span id="homeLogoStatus">Using team initial</span></div><button onclick="removeLogo('home')">Remove logo</button></details>
+ </section>
+ <section class="card"><h2>Right team</h2>
+  <label>Team name<input id="awayName"></label><div class="pair"><label>Ranking<input id="awayRanking" placeholder="5"></label><label>Sets won<input id="awaySetsInput" type="number" min="0" max="5"></label></div>
+  <div class="score" id="awayScoreText">0</div><div class="buttons"><button onclick="points('away',-1)">−1</button><button class="blue" onclick="points('away',1)">+1 POINT</button></div>
+  <div class="sets">Sets: <span id="awaySetsText">0</span></div><div class="buttons"><button onclick="sets('away',-1)">−1 SET</button><button class="blue" onclick="sets('away',1)">+1 SET</button></div>
+  <details><summary>Team look &amp; logo</summary><div class="pair"><label>Team color<input id="awayBackground" type="color"></label><label>Text color<input id="awayText" type="color"></label></div><label>Logo<input id="awayFile" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="logo-row"><img id="awayPreview" hidden><span id="awayLogoStatus">Using team initial</span></div><button onclick="removeLogo('away')">Remove logo</button></details>
+ </section>
+ <section class="card match"><h2>Match &amp; scoreboard size</h2>
+  <div class="display-grid"><label>Current set<select id="currentSet"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label><label>Width (px)<input id="width" type="number" min="600" max="1800"></label><label>Height (px)<input id="height" type="number" min="50" max="150"></label><label>Bottom (%)<input id="bottom" type="number" min="0" max="40" step=".5"></label></div>
+  <div class="pair"><label>Right-side accent<input id="accent" type="color"></label><div></div></div>
+  <div class="buttons"><button class="blue" onclick="newSet()">NEW SET — RESET POINTS</button><button class="red" onclick="resetMatch()">RESET MATCH</button></div>
+  <p class="note">The camera reader still uses the same volleyball score data, so automatic point reading stays compatible. Sets remain manual. Keep the scoreboard, controller, and camera reader open in the same browser on the same computer.</p>
+ </section>
+</div></div>
+<script>
+const KEY='htv-volleyball-score';
+const D={homeName:'HEARTLAND',awayName:'OPPONENT',homeScore:0,awayScore:0,homeSets:0,awaySets:0,currentSet:1,home:{background:'#183c67',text:'#ffffff',ranking:'',logo:''},away:{background:'#a52c24',text:'#ffffff',ranking:'',logo:''},width:1120,height:82,bottom:5.5,accent:'#f4b41b'};
+function read(){let s={};try{s=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{};return {...D,...s,home:{...D.home,...(s.home||{})},away:{...D.away,...(s.away||{})}}}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s));draw()}
+function points(side,n){const s=read(),k=side+'Score';s[k]=Math.max(0,Math.min(99,(+s[k]||0)+n));save(s)}
+function sets(side,n){const s=read(),k=side+'Sets';s[k]=Math.max(0,Math.min(5,(+s[k]||0)+n));s.currentSet=Math.max(1,Math.min(5,s.homeSets+s.awaySets+1));save(s)}
+function newSet(){const s=read();s.homeScore=0;s.awayScore=0;s.currentSet=Math.max(1,Math.min(5,s.homeSets+s.awaySets+1));save(s)}
+function resetMatch(){if(!confirm('Reset points and sets for both teams?'))return;const s=read();s.homeScore=s.awayScore=s.homeSets=s.awaySets=0;s.currentSet=1;save(s)}
+function setTop(key,val){const s=read();s[key]=val;save(s)}
+function setBrand(side,key,val){const s=read();s[side][key]=val;save(s)}
+async function upload(side,input){const f=input.files[0];if(!f)return;try{if(!['image/png','image/jpeg','image/webp'].includes(f.type))throw Error('Use PNG, JPG, or WebP.');const u=URL.createObjectURL(f);try{const img=new Image();img.src=u;await img.decode();const scale=Math.min(1,512/img.naturalWidth,512/img.naturalHeight),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));c.getContext('2d').drawImage(img,0,0,c.width,c.height);setBrand(side,'logo',c.toDataURL('image/png'))}finally{URL.revokeObjectURL(u)}}catch(e){alert(e.message)}input.value=''}
+function removeLogo(side){setBrand(side,'logo','')}
+for(const side of ['home','away']){
+ document.getElementById(side+'Name').oninput=e=>setTop(side+'Name',e.target.value.toUpperCase());
+ document.getElementById(side+'Ranking').oninput=e=>setBrand(side,'ranking',e.target.value);
+ document.getElementById(side+'SetsInput').onchange=e=>{const s=read();s[side+'Sets']=Math.max(0,Math.min(5,+e.target.value||0));save(s)};
+ document.getElementById(side+'Background').oninput=e=>setBrand(side,'background',e.target.value);
+ document.getElementById(side+'Text').oninput=e=>setBrand(side,'text',e.target.value);
+ document.getElementById(side+'File').onchange=e=>upload(side,e.target);
+}
+currentSet.onchange=e=>setTop('currentSet',+e.target.value);
+for(const id of ['width','height','bottom'])document.getElementById(id).onchange=e=>setTop(id,+e.target.value);
+accent.oninput=e=>setTop('accent',e.target.value);
+function draw(){const s=read();for(const side of ['home','away']){
+ const nm=document.getElementById(side+'Name');if(document.activeElement!==nm)nm.value=s[side+'Name'];
+ const rk=document.getElementById(side+'Ranking');if(document.activeElement!==rk)rk.value=s[side].ranking||'';
+ document.getElementById(side+'ScoreText').textContent=s[side+'Score'];document.getElementById(side+'SetsText').textContent=s[side+'Sets'];
+ const si=document.getElementById(side+'SetsInput');if(document.activeElement!==si)si.value=s[side+'Sets'];
+ document.getElementById(side+'Background').value=s[side].background;document.getElementById(side+'Text').value=s[side].text;
+ const p=document.getElementById(side+'Preview');p.hidden=!s[side].logo;if(s[side].logo)p.src=s[side].logo;else p.removeAttribute('src');
+ document.getElementById(side+'LogoStatus').textContent=s[side].logo?'Custom logo ready':'Using team initial';
+ }currentSet.value=String(s.currentSet||1);width.value=s.width;height.value=s.height;bottom.value=s.bottom;accent.value=s.accent}
+draw();window.addEventListener('storage',e=>{if(e.key===KEY)draw()});setInterval(draw,500);
+</script></body></html>
