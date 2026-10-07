@@ -229,7 +229,7 @@ function stable(key,value,time){
  const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
  candidates[key]={value,time,count,history};return count>=2;
 }
-function readState(){try{return {homeScore:0,awayScore:0,homeSets:0,awaySets:0,...JSON.parse(localStorage.getItem('htv-volleyball-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,homeSets:0,awaySets:0}}}
+function readState(){try{return {homeScore:0,awayScore:0,homeSets:0,awaySets:0,...JSON.parse(localStorage.getItem('htv-volleyball-college-v2-score')||localStorage.getItem('htv-volleyball-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,homeSets:0,awaySets:0}}}
 function apply(result,automatic){
  const state=readState(),time=Date.now();
  
@@ -247,7 +247,7 @@ function apply(result,automatic){
   if(false&&state.running){state.running=false;changed=true}
  }
  // Unchanged samples need no storage write or overlay redraw.
- if(changed){state.stamp=time;localStorage.setItem('htv-volleyball-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
+ if(changed){state.stamp=time;localStorage.setItem('htv-volleyball-college-v2-score',JSON.stringify(state));localStorage.setItem('htv-volleyball-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
  for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
  return changed;
 }
