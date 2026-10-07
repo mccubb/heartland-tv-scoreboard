@@ -29,7 +29,8 @@ function crop(frame,r){const sw=Math.max(1,Math.round(r.w*frame.width)),sh=Math.
 function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
- const readings=[80,110,145,185,220].map(limit=>readSevenSegmentPass(image,key,limit)).filter(Boolean);
+ const prepared=segmentPixels(image);
+ const readings=[80,110,145,185,220].map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
  if(!readings.length)return null;
  const groups=new Map();for(const r of readings){const g=groups.get(r.text)||[];g.push(r);groups.set(r.text,g)}
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
@@ -37,14 +38,17 @@ function readSevenSegment(image,key){
  const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
  return votes.sort((a,b)=>b.confidence-a.confidence)[0];
 }
-function readSevenSegmentPass(image,key,limit){
+function segmentPixels(image){
  const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
  const hist=new Array(256).fill(0),gray=new Uint8Array(w*h);
  for(let i=0;i<gray.length;i++){gray[i]=Math.round((p[i*4]+p[i*4+1]+p[i*4+2])/3);hist[gray[i]]++}
  let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];let count=0,left=0,best=-1,threshold=128;
  for(let i=0;i<255;i++){count+=hist[i];left+=i*hist[i];if(!count||count===gray.length)continue;const delta=left/count-(sum-left)/(gray.length-count),variance=count*(gray.length-count)*delta*delta;if(variance>best){best=variance;threshold=i}}
  // Crops are contrast-normalized. Do not count mid-gray screen shadows as bars.
- threshold=Math.min(threshold,limit);
+ return {gray,threshold};
+}
+function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
+ const w=image.width,h=image.height,gray=prepared.gray,threshold=Math.min(prepared.threshold,limit);
  const ink=new Uint8Array(w*h),cols=new Array(w).fill(0);let top=h,bottom=-1;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){ink[y*w+x]=1;cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}
  let height=bottom-top+1;if(height<12)return null;
@@ -55,11 +59,17 @@ function readSevenSegmentPass(image,key,limit){
   while(stack.length){const n=stack.pop(),x=n%w,y=Math.floor(n/w);points.push(n);l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y);for(const next of [x>0?n-1:-1,x<w-1?n+1:-1,y>0?n-w:-1,y<h-1?n+w:-1])if(next>=0&&ink[next]&&!seen[next]){seen[next]=1;stack.push(next)}}
   components.push({l,r,t,b,points});
  }
+ // A flat frame edge must not stretch the glyph height or bridge two digits.
+ for(const c of components)if((c.t<=16||c.b>=h-17)&&c.r-c.l+1>height*.55&&c.b-c.t+1<height*.15)for(const n of c.points)ink[n]=0;
+ top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
  let colonX=null,decimalX=null;
  if(key==='seconds'){const dots=components.filter(c=>c.b-c.t+1<height*.24&&c.r-c.l+1<height*.25&&c.points.length>=height*.3);
   for(const a of dots)for(const b of dots)if(a!==b&&Math.abs((a.l+a.r-b.l-b.r)/2)<height*.18&&b.t-a.b>height*.15&&b.t-a.b<height*.65){colonX=(a.l+a.r+b.l+b.r)/4;for(const n of [...a.points,...b.points])ink[n]=0}
  }
  if(key==='seconds'&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.003);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;for(const n of dots[0].points)ink[n]=0}}
+ // Tenths are outside the whole-seconds number. Remove them before grouping,
+ // so their bars cannot change its height, lean, or digit boundaries.
+ if(decimalX!==null)for(let y=0;y<h;y++)for(let x=Math.ceil(decimalX);x<w;x++)ink[y*w+x]=0;
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
  let runs=[];let start=-1,gap=0;const maxGap=Math.max(1,Math.round(height*.035));
@@ -68,7 +78,7 @@ function readSevenSegmentPass(image,key,limit){
  // separate connected shapes instead of merging "20" or "10" into one digit.
  const tall=components.filter(c=>c.b-c.t+1>=height*.72&&c.points.some(n=>ink[n]));
  const total=cols.reduce((a,v)=>a+v,0),covered=tall.reduce((a,c)=>a+c.points.filter(n=>ink[n]).length,0);
- if(tall.length&&tall.length<=4&&covered>=total*.82)runs=tall.sort((a,b)=>a.l-b.l).map(c=>({left:c.l,right:c.r,points:new Set(c.points.filter(n=>ink[n]))}));
+ if(tall.length&&tall.length<=4&&covered>=total*.98)runs=tall.sort((a,b)=>a.l-b.l).map(c=>({left:c.l,right:c.r,points:new Set(c.points.filter(n=>ink[n]))}));
  else{
   // LED bars can be separate islands. Estimate their common lean before
   // grouping columns, so the bottom of one digit cannot overlap the next.
@@ -89,14 +99,19 @@ function readSevenSegmentPass(image,key,limit){
   if(dh<height*.72){if(key==='seconds'&&dh>height*.18&&dw<height*.3){text+=':';colons++;continue}return null}
   if(dw/dh<.24){text+='1';digits++;confidence=Math.min(confidence,92);continue}
   if(dw/dh>1.05)return null;
-  let match=null;
+  let match=null;const glyphX=[],glyphY=[],rows=regions.map(()=>[]);
+  for(let y=yt;y<=yb;y++)for(let x=run.left;x<=run.right;x++)if(pixel(x,y)){
+   const n=glyphX.length;glyphX.push(x);glyphY.push(y-yt);
+   for(let j=0;j<regions.length;j++)if(y>=yt+regions[j][1]*dh&&y<yt+regions[j][3]*dh)rows[j].push(n);
+  }
+  const transformed=new Float64Array(glyphX.length);
   // Test modest lean angles; seven-segment fonts and camera perspective can
   // shift the lower bars sideways without changing the digit.
-  for(let shear=-.32;shear<=.161;shear+=.04){let left=w,right=-w;const points=[];
-   for(let y=yt;y<=yb;y++)for(let x=run.left;x<=run.right;x++)if(pixel(x,y)){const xx=x-shear*(y-yt);points.push([xx,y]);left=Math.min(left,xx);right=Math.max(right,xx)}
+  for(let shear=-.32;shear<=.161;shear+=.04){let left=w,right=-w;
+   for(let n=0;n<glyphX.length;n++){const xx=glyphX[n]-shear*glyphY[n];transformed[n]=xx;left=Math.min(left,xx);right=Math.max(right,xx)}
    const width=right-left+1;
-   if(width/dh<.24){const upper=points.some(([,y])=>y<yt+dh*.35),lower=points.some(([,y])=>y>yt+dh*.65);if(upper&&lower)match={digit:1,quality:1,certainty:.9};continue}
-   const coverage=regions.map(([x0,y0,x1,y1])=>{let on=0;for(const [x,y] of points)if(x>=left+x0*width&&x<left+x1*width&&y>=yt+y0*dh&&y<yt+y1*dh)on++;return Math.min(1,on/Math.max(1,(x1-x0)*width*(y1-y0)*dh))});
+   if(width/dh<.24){const upper=glyphY.some(y=>y<dh*.35),lower=glyphY.some(y=>y>dh*.65);if(upper&&lower)match={digit:1,quality:1,certainty:.9};continue}
+   const coverage=regions.map(([x0,y0,x1,y1],j)=>{let on=0;const lo=left+x0*width,hi=left+x1*width;for(const n of rows[j])if(transformed[n]>=lo&&transformed[n]<hi)on++;return Math.min(1,on/Math.max(1,(x1-x0)*width*(y1-y0)*dh))});
    const peak=Math.max(...coverage);if(peak<.2)continue;const bits=coverage.map(v=>v>Math.max(.14,peak*.37)?'1':'0').join('');
    let digit=patterns.indexOf(bits);if(bits==='1011110')digit=6;if(bits==='1110010')digit=7;if(bits==='1110011')digit=9;if(digit<0)continue;
    const certainty=Math.min(...coverage.map((v,i)=>bits[i]==='1'?Math.min(1,v/(peak*.65)):Math.min(1,1-v/(peak*.37))));
@@ -114,41 +129,96 @@ function readSevenSegmentPass(image,key,limit){
 // A three-frame median suppresses compression noise and single-frame LED
 // flicker without blending old and new digit bars into a different number.
 function medianCrop(images){const c=images[1],x=c.getContext('2d'),data=images.map(im=>im.getContext('2d').getImageData(0,0,im.width,im.height));for(let i=0;i<data[1].data.length;i+=4)for(let channel=0;channel<3;channel++){const n=i+channel,a=data[0].data[n],b=data[1].data[n],d=data[2].data[n];data[1].data[n]=a+b+d-Math.min(a,b,d)-Math.max(a,b,d)}x.putImageData(data[1],0,0);return c}
-async function scan(){
+// Separate clock and score workers keep expensive score recognition from
+// blocking clock samples or browser painting. Unsupported browsers use the
+// same decoder locally.
+const decoderWorkers=new Map();let decoderRequest=0;
+async function decodeSegments(image,key){
+ if(typeof Worker==='undefined')return readSevenSegment(image,key);
+ const lane=key==='seconds'?'clock':'scores';let entry=decoderWorkers.get(lane);
+ if(!entry){
+  try{
+   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
+   entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
+   worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
+   decoderWorkers.set(lane,entry);
+  }catch(e){return readSevenSegment(image,key)}
+ }
+ const pixels=image.getContext('2d').getImageData(0,0,image.width,image.height).data,id=++decoderRequest;
+ return new Promise((resolve,reject)=>{entry.pending.set(id,{resolve,reject});entry.worker.postMessage({id,key,width:image.width,height:image.height,pixels},[pixels.buffer])});
+}
+async function scan(onField,fields=activeKeys()){
+ const token=generation;
  if(!ready())throw Error('Connect a camera and mark both score areas first.');
  const w=config.reader==='text'?await engine():null,frames=[];
  for(let i=0;i<(config.reader==='segments'?3:1);i++){if(i)await new Promise(resolve=>setTimeout(resolve,50));if(!ready())throw Error('Camera disconnected.');const frame=document.createElement('canvas');frame.width=video.videoWidth;frame.height=video.videoHeight;frame.getContext('2d').drawImage(video,0,0);frames.push(frame)}
- const result={};for(const key of activeKeys()){
+ const order=[...fields].sort((a,b)=>(b==='seconds')-(a==='seconds'));
+ const result={};for(const key of order){
   const crops=frames.map(frame=>crop(frame,config.regions[key])),image=crops.length===3?medianCrop(crops):crops[0];
   const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
-  if(config.reader==='segments')reading=readSevenSegment(image,key);
+  if(config.reader==='segments')reading=await decodeSegments(image,key);
   else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
   const confidence=reading?.confidence||0;result[key]={value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
   const accepted=confirmed[key],observed=result[key].value;
   if(observed!==null)byId(key+'Value').textContent=format(key,observed);
   else if(accepted)byId(key+'Value').textContent=format(key,accepted.value);
   byId(key+'Note').textContent=observed===null?(accepted?'Holding confirmed '+format(key,accepted.value)+' · last confirmed '+Math.floor((Date.now()-accepted.time)/1000)+'s ago':'Checking digit bars — waiting for a clear sample'):reading.method+' · '+Math.round(confidence)+'% confidence'+(running?' · confirming for overlay':'');
+  if(onField&&token===generation&&running)onField(key,result[key]);
+  // Let the overlay receive the clock write before processing other fields.
+  if(onField)await new Promise(resolve=>setTimeout(resolve,0));
  }return result;
 }
 function stable(key,value,time){
  const previous=candidates[key];
  // An unclear sample should not erase good recent evidence.
  if(value===null){if(previous&&time-previous.time>10000)delete candidates[key];return false}
- if(key==='seconds'){const elapsed=previous?(time-previous.time)/1000:0,consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=2}
+ if(key==='seconds'){
+  const accepted=confirmed[key],elapsed=previous?(time-previous.time)/1000:0;
+  // Compare with the last accepted clock, not an unconfirmed bad sample.
+  // A plausible next second updates immediately after initial confirmation.
+  if(accepted){const age=(time-accepted.time)/1000,drop=accepted.value-value;
+   if(age<=10&&drop>=0&&drop<=Math.ceil(age)+1){candidates[key]={value,time,count:2};return true}
+   // A real clock correction/reset needs three matching fresh observations.
+   const count=previous&&previous.value===value?previous.count+1:1;
+   candidates[key]={value,time,count};return count>=3;
+  }
+  const consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;
+  candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=2;
+ }
  const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
  candidates[key]={value,time,count,history};return count>=2;
 }
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
 function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(state[key]!==value){state[key]=value;changed=true}confirmed[key]={value,time};if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!==null&&(!automatic||candidates[key]?.count>=2))byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);return changed}
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().some(k=>result[k].value!==null);const complete=activeKeys().every(k=>result[k].value!==null);status(verified?(complete?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Clear fields are ready. Start automatic updates to update those fields while retrying the others.'):'No clear fields yet. Check the crop previews and test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
-async function start(){if(!verified||!ready()||busy)return;running=true;candidates={};const seedTime=Date.now();for(const key of activeKeys())if(lastTest?.[key]?.value!=null)stable(key,lastTest[key].value,seedTime);const token=++generation;buttons();status('Automatic updates on. Confirming repeated readings…');while(running&&token===generation){busy=true;try{const result=await scan();if(!running||token!==generation)break;apply(result,true);if(activeKeys().some(k=>result[k].value===null))status('Automatic updates on — checking unclear samples and keeping confirmed numbers.');else if(activeKeys().every(k=>candidates[k]?.count>=2))status('Automatic updates on — scoreboard readings confirmed.')}catch(e){pause('Updates paused: '+e.message);break}finally{busy=false;buttons()}await new Promise(resolve=>setTimeout(resolve,150))}}
+async function start(){
+ if(!verified||!ready()||busy)return;
+ running=true;candidates={};const seedTime=Date.now();
+ for(const key of activeKeys())if(lastTest?.[key]?.value!=null)stable(key,lastTest[key].value,seedTime);
+ const token=++generation;busy=true;buttons();status('Automatic updates on. Confirming readings…');
+ const consume=(key,reading)=>{if(running&&token===generation)apply({[key]:reading},true)};
+ async function loop(fields){while(running&&token===generation){
+  await scan(consume,fields);if(!running||token!==generation)break;
+  await new Promise(resolve=>setTimeout(resolve,40));
+ }}
+ try{
+  const fields=activeKeys();
+  // Text OCR shares one engine. The default segment reader has independent
+  // clock sampling, so scores and quarter can never hold up its next frame.
+  if(config.reader==='segments'&&fields.includes('seconds'))await Promise.all([loop(['seconds']),loop(fields.filter(k=>k!=='seconds'))]);
+  else await loop(fields.sort((a,b)=>(b==='seconds')-(a==='seconds')));
+ }catch(e){if(token===generation)pause('Updates paused: '+e.message)}
+ finally{busy=false;buttons()}
+}
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
 for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
-window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v5 · final-minute seconds + quarter';
+window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v6 · priority clock + whole seconds';
 buttons();
+
 
 
 
