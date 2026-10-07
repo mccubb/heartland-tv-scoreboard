@@ -62,17 +62,29 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  // A flat frame edge must not stretch the glyph height or bridge two digits.
  for(const c of components)if((c.t<=16||c.b>=h-17)&&c.r-c.l+1>height*.55&&c.b-c.t+1<height*.15)for(const n of c.points)ink[n]=0;
  top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
- let colonX=null,decimalX=null;
+ let colonX=null,decimalX=null,decimalY=null;
  if(key==='seconds'){const dots=components.filter(c=>c.b-c.t+1<height*.24&&c.r-c.l+1<height*.25&&c.points.length>=height*.3);
   for(const a of dots)for(const b of dots)if(a!==b&&Math.abs((a.l+a.r-b.l-b.r)/2)<height*.18&&b.t-a.b>height*.15&&b.t-a.b<height*.65){colonX=(a.l+a.r+b.l+b.r)/4;for(const n of [...a.points,...b.points])ink[n]=0}
  }
- if(key==='seconds'&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.003);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;for(const n of dots[0].points)ink[n]=0}}
+ if(key==='seconds'&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.001);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;decimalY=(dots[0].t+dots[0].b)/2;for(const n of dots[0].points)ink[n]=0}}
  // Tenths are outside the whole-seconds number. Remove them before grouping,
  // so their bars cannot change its height, lean, or digit boundaries.
- if(decimalX!==null)for(let y=0;y<h;y++)for(let x=Math.ceil(decimalX);x<w;x++)ink[y*w+x]=0;
+ if(decimalX!==null){
+  const slopes=[];
+  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dh>height*.65||dw/dh>.85)continue;
+   let sx=0,sy=0;for(const n of c.points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/c.points.length,my=sy/c.points.length;let cov=0,variance=0;
+   for(const n of c.points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope);
+  }
+  slopes.sort((a,b)=>a-b);const lean=slopes.length>=2?slopes[Math.floor(slopes.length/2)]:0,tolerance=slopes.length>=2?0:height*.12;
+  // Remove tenths by their complete shapes in the digit plane. A vertical
+  // cut through the decimal point clips the upper bars of slanted seconds.
+  for(const c of components){let center=0;for(const n of c.points)center+=n%w-lean*(Math.floor(n/w)-decimalY);
+   if(center/c.points.length>decimalX+tolerance)for(const n of c.points)ink[n]=0;
+  }
+ }
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
- let runs=[];let start=-1,gap=0;const maxGap=Math.max(1,Math.round(height*.035));
+ let runs=[];let start=-1,gap=0;const maxGap=key==='seconds'?1:Math.max(1,Math.round(height*.035));
  for(let x=0;x<=w+maxGap;x++){if(x<w&&cols[x]>0){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){runs.push({left:start,right:x-gap});start=-1}}
  // Tight, leaning digits can overlap in the column projection. Keep their
  // separate connected shapes instead of merging "20" or "10" into one digit.
@@ -83,9 +95,19 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
   // LED bars can be separate islands. Estimate their common lean before
   // grouping columns, so the bottom of one digit cannot overlap the next.
   const slopes=[];
-  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dw/dh>.55)continue;const points=c.points.filter(n=>ink[n]);if(points.length<height*.3)continue;let sx=0,sy=0;for(const n of points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/points.length,my=sy/points.length;let cov=0,variance=0;for(const n of points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope)}
+  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dw/dh>(key==='seconds'?.85:.55))continue;const points=c.points.filter(n=>ink[n]);if(points.length<height*.3)continue;let sx=0,sy=0;for(const n of points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/points.length,my=sy/points.length;let cov=0,variance=0;for(const n of points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope)}
   if(slopes.length>=2){slopes.sort((a,b)=>a-b);const lean=slopes[Math.floor(slopes.length/2)],margin=Math.ceil(Math.abs(lean)*height)+3,projection=new Array(w+margin*2).fill(0),points=[];
    for(let y=top;y<=bottom;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){const column=Math.round(x-lean*(y-top)+margin);projection[column]++;points.push({n:y*w+x,column})}
+   // Clear tiny valleys and their antialias fringe together. This keeps
+   // a real two-pixel digit gap from shrinking into a one-pixel bridge.
+   if(key==='seconds'){
+    const peak=Math.max(...projection);let a=0;
+    while(a<projection.length){if(projection[a]>peak*.32){a++;continue}let b=a,min=Infinity;
+     while(b<projection.length&&projection[b]<=peak*.32){min=Math.min(min,projection[b]);b++}
+     if(b-a<=Math.max(2,height*.08)&&min<=peak*.04)for(let i=a;i<b;i++)projection[i]=0;
+     a=b;
+    }
+   }
    const groups=[];let start=-1,gap=0;for(let x=0;x<=projection.length+maxGap;x++){if(x<projection.length&&projection[x]){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){groups.push([start,x-gap]);start=-1}}
    runs=groups.map(([a,b])=>{const ns=points.filter(p=>p.column>=a&&p.column<=b).map(p=>p.n);let left=w,right=0;for(const n of ns){left=Math.min(left,n%w);right=Math.max(right,n%w)}return {left,right,points:new Set(ns)}});
   }
@@ -197,7 +219,8 @@ function stable(key,value,time){
    candidates[key]={value,time,observedAt,count};
    // A deliberate clock correction/reset requires a steady reading, rather
    // than accepting a quick run of values that would speed up the countdown.
-   return count>=3&&time-observedAt>=800;
+   if(drop>0&&accepted.value<=60)return false;
+   return count>=3&&time-observedAt>=(drop<0?400:800);
   }
   const consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;
   candidates[key]={value,time,observedAt,count:consistent?previous.count+1:1};
@@ -253,7 +276,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v7 · steady clock updates';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v8 · steady clock + decimal digits';
 buttons();
 
 
