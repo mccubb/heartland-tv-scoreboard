@@ -3,7 +3,7 @@ const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','second
 let config={regions:{},reader:'segments',polarity:'light',confidence:70,clockEnabled:false,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
 let stream=null,worker=null,loading=null,busy=false,running=false,generation=0,selected=null,drag=null,lastTest=null,verified=false;
-let candidates={};const video=byId('video'),overlay=byId('overlay'),ctx=overlay.getContext('2d');
+let candidates={},confirmed={};const video=byId('video'),overlay=byId('overlay'),ctx=overlay.getContext('2d');
 const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a'};
 function status(text){byId('status').textContent=text}
 function store(){localStorage.setItem('htv-camera',JSON.stringify(config))}
@@ -27,13 +27,24 @@ async function engine(){if(worker)return worker;if(!window.Tesseract)throw Error
 function crop(frame,r){const sw=Math.max(1,Math.round(r.w*frame.width)),sh=Math.max(1,Math.round(r.h*frame.height)),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*frame.width,r.y*frame.height,sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
 // Read the seven lit bars directly instead of asking a text model to guess a font.
 function readSevenSegment(image,key){
+ // Check more than one exposure cutoff. A faint bar should not disappear
+ // solely because a bright reflection changed the crop's contrast.
+ const readings=[80,110,145,185,220].map(limit=>readSevenSegmentPass(image,key,limit)).filter(Boolean);
+ if(!readings.length)return null;
+ const groups=new Map();for(const r of readings){const g=groups.get(r.text)||[];g.push(r);groups.set(r.text,g)}
+ const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
+ if(ranked.length>1&&ranked[0].length<=ranked[1].length)return null;
+ const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
+ return votes.sort((a,b)=>b.confidence-a.confidence)[0];
+}
+function readSevenSegmentPass(image,key,limit){
  const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
  const hist=new Array(256).fill(0),gray=new Uint8Array(w*h);
  for(let i=0;i<gray.length;i++){gray[i]=Math.round((p[i*4]+p[i*4+1]+p[i*4+2])/3);hist[gray[i]]++}
  let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];let count=0,left=0,best=-1,threshold=128;
  for(let i=0;i<255;i++){count+=hist[i];left+=i*hist[i];if(!count||count===gray.length)continue;const delta=left/count-(sum-left)/(gray.length-count),variance=count*(gray.length-count)*delta*delta;if(variance>best){best=variance;threshold=i}}
  // Crops are contrast-normalized. Do not count mid-gray screen shadows as bars.
- threshold=Math.min(threshold,110);
+ threshold=Math.min(threshold,limit);
  const ink=new Uint8Array(w*h),cols=new Array(w).fill(0);let top=h,bottom=-1;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){ink[y*w+x]=1;cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}
  let height=bottom-top+1;if(height<12)return null;
@@ -57,6 +68,17 @@ function readSevenSegment(image,key){
  const tall=components.filter(c=>c.b-c.t+1>=height*.72&&c.points.some(n=>ink[n]));
  const total=cols.reduce((a,v)=>a+v,0),covered=tall.reduce((a,c)=>a+c.points.filter(n=>ink[n]).length,0);
  if(tall.length&&tall.length<=4&&covered>=total*.82)runs=tall.sort((a,b)=>a.l-b.l).map(c=>({left:c.l,right:c.r,points:new Set(c.points.filter(n=>ink[n]))}));
+ else{
+  // LED bars can be separate islands. Estimate their common lean before
+  // grouping columns, so the bottom of one digit cannot overlap the next.
+  const slopes=[];
+  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dw/dh>.55)continue;const points=c.points.filter(n=>ink[n]);if(points.length<height*.3)continue;let sx=0,sy=0;for(const n of points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/points.length,my=sy/points.length;let cov=0,variance=0;for(const n of points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope)}
+  if(slopes.length>=2){slopes.sort((a,b)=>a-b);const lean=slopes[Math.floor(slopes.length/2)],margin=Math.ceil(Math.abs(lean)*height)+3,projection=new Array(w+margin*2).fill(0),points=[];
+   for(let y=top;y<=bottom;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){const column=Math.round(x-lean*(y-top)+margin);projection[column]++;points.push({n:y*w+x,column})}
+   const groups=[];let start=-1,gap=0;for(let x=0;x<=projection.length+maxGap;x++){if(x<projection.length&&projection[x]){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){groups.push([start,x-gap]);start=-1}}
+   runs=groups.map(([a,b])=>{const ns=points.filter(p=>p.column>=a&&p.column<=b).map(p=>p.n);let left=w,right=0;for(const n of ns){left=Math.min(left,n%w);right=Math.max(right,n%w)}return {left,right,points:new Set(ns)}});
+  }
+ }
  const patterns=['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000','1111111','1111011'];
  // Order: top, upper right, lower right, bottom, lower left, upper left, middle.
  const regions=[[.22,0,.78,.17],[.7,.16,1,.43],[.7,.57,1,.86],[.22,.84,.78,1],[0,.57,.3,.86],[0,.16,.3,.43],[.22,.42,.78,.59]];
@@ -101,26 +123,30 @@ async function scan(){
   if(config.reader==='segments')reading=readSevenSegment(image,key);
   else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
   const confidence=reading?.confidence||0;result[key]={value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
-  byId(key+'Value').textContent=format(key,result[key].value);byId(key+'Note').textContent=result[key].value===null?(reading?'Uncertain: '+reading.text+' ('+Math.round(confidence)+'%)':'Digit bars not confirmed in this sample — holding the last confirmed number'):reading.method+' · '+Math.round(confidence)+'% confidence';
+  const accepted=confirmed[key],observed=result[key].value;
+  if(observed!==null)byId(key+'Value').textContent=format(key,observed);
+  else if(accepted)byId(key+'Value').textContent=format(key,accepted.value);
+  byId(key+'Note').textContent=observed===null?(accepted?'Holding confirmed '+format(key,accepted.value)+' · last confirmed '+Math.floor((Date.now()-accepted.time)/1000)+'s ago':'Checking digit bars — waiting for a clear sample'):reading.method+' · '+Math.round(confidence)+'% confidence'+(running?' · confirming for overlay':'');
  }return result;
 }
 function stable(key,value,time){
  const previous=candidates[key];
  // An unclear sample should not erase good recent evidence.
- if(value===null){if(previous&&time-previous.time>3000)delete candidates[key];return false}
- if(key==='seconds'){const elapsed=previous?(time-previous.time)/1000:0,consistent=previous&&elapsed<=3&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=3}
- const history=(previous?.history||[]).filter(r=>time-r.time<=3000);history.push({value,time});while(history.length>5)history.shift();const count=history.filter(r=>r.value===value).length;
- candidates[key]={value,time,count,history};return count>=3;
+ if(value===null){if(previous&&time-previous.time>10000)delete candidates[key];return false}
+ if(key==='seconds'){const elapsed=previous?(time-previous.time)/1000:0,consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=2}
+ const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
+ candidates[key]={value,time,count,history};return count>=2;
 }
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
-function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(automatic&&key!=='seconds'&&Math.abs(value-state[key])>3&&candidates[key].count<4){status('Confirming the score difference with an extra reading…');continue}if(state[key]!==value){state[key]=value;changed=true}if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}return changed}
+function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(state[key]!==value){state[key]=value;changed=true}confirmed[key]={value,time};if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!==null&&(!automatic||candidates[key]?.count>=2))byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);return changed}
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().every(k=>result[k].value!==null);status(verified?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Some digit bars could not be confirmed. Check the crop previews and reader type, then test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
-async function start(){if(!verified||!ready()||busy)return;running=true;candidates={};const token=++generation;buttons();status('Automatic updates on. Confirming repeated readings…');while(running&&token===generation){busy=true;try{const result=await scan();if(!running||token!==generation)break;apply(result,true);if(activeKeys().some(k=>result[k].value===null))status('Automatic updates on — checking unclear samples and keeping confirmed numbers.');else if(activeKeys().every(k=>candidates[k]?.count>=3))status('Automatic updates on — scoreboard readings confirmed.')}catch(e){pause('Updates paused: '+e.message);break}finally{busy=false;buttons()}await new Promise(resolve=>setTimeout(resolve,350))}}
+async function start(){if(!verified||!ready()||busy)return;running=true;candidates={};const seedTime=Date.now();for(const key of activeKeys())if(lastTest?.[key]?.value!=null)stable(key,lastTest[key].value,seedTime);const token=++generation;buttons();status('Automatic updates on. Confirming repeated readings…');while(running&&token===generation){busy=true;try{const result=await scan();if(!running||token!==generation)break;apply(result,true);if(activeKeys().some(k=>result[k].value===null))status('Automatic updates on — checking unclear samples and keeping confirmed numbers.');else if(activeKeys().every(k=>candidates[k]?.count>=2))status('Automatic updates on — scoreboard readings confirmed.')}catch(e){pause('Updates paused: '+e.message);break}finally{busy=false;buttons()}await new Promise(resolve=>setTimeout(resolve,150))}}
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
 for(const key of ['reader','polarity','confidence','clockEnabled']){const input=byId(key);if(key==='clockEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='clockEnabled'?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate()});
 buttons();
+
 
 
