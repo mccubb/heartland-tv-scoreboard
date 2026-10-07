@@ -24,7 +24,7 @@ for(const button of document.querySelectorAll('[data-region]'))button.onclick=()
 async function connect(){pause();verified=false;lastTest=null;buttons();try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera access is unavailable. Open this page in Chrome using the HTTPS link.');if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;const requested=byId('device').value;stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{...(requested?{deviceId:{exact:requested}}:{}),width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;await video.play();const devices=await navigator.mediaDevices.enumerateDevices();byId('device').replaceChildren();for(const d of devices.filter(d=>d.kind==='videoinput')){const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||'Camera '+(byId('device').options.length+1);byId('device').appendChild(o)}const actual=stream.getVideoTracks()[0].getSettings().deviceId;byId('device').value=actual||requested;config.device=byId('device').value;store();renderBoxes();status('Camera connected. Mark the two scores, then test.');stream.getVideoTracks()[0].addEventListener('ended',()=>disconnect('Camera disconnected. Updates paused.'))}catch(e){status(e.name==='NotAllowedError'?'Camera permission denied. Allow camera access in your browser and try again.':e.message);stream=null}buttons()}
 function disconnect(message='Camera disconnected.'){pause(message);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;verified=false;lastTest=null;ctx.clearRect(0,0,overlay.width,overlay.height);buttons()}
 async function engine(){if(worker)return worker;if(!window.Tesseract)throw Error('The reading engine did not load. Check your internet connection and reload this page.');if(!loading)loading=(async()=>{status('Loading reading engine for first use…');const w=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status?.includes('loading')||m.status?.includes('initializing'))status('Loading reading engine… '+Math.round((m.progress||0)*100)+'%')}});await w.setParameters({tessedit_char_whitelist:'0123456789:.',tessedit_pageseg_mode:Tesseract.PSM.SINGLE_LINE,user_defined_dpi:'150'});worker=w;return w})().catch(e=>{loading=null;throw e});return loading}
-function crop(frame,r){const sw=Math.max(1,Math.round(r.w*frame.width)),sh=Math.max(1,Math.round(r.h*frame.height)),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*frame.width,r.y*frame.height,sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
+function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||frame.width))),sh=Math.max(1,Math.round(r.h*(frame.videoHeight||frame.height))),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*(frame.videoWidth||frame.width),r.y*(frame.videoHeight||frame.height),sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
 // Read the seven lit bars directly instead of asking a text model to guess a font.
 function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
@@ -152,14 +152,22 @@ async function scan(onField,fields=activeKeys()){
  const token=generation;
  if(!ready())throw Error('Connect a camera and mark both score areas first.');
  const w=config.reader==='text'?await engine():null,frames=[];
- for(let i=0;i<(config.reader==='segments'?3:1);i++){if(i)await new Promise(resolve=>setTimeout(resolve,50));if(!ready())throw Error('Camera disconnected.');const frame=document.createElement('canvas');frame.width=video.videoWidth;frame.height=video.videoHeight;frame.getContext('2d').drawImage(video,0,0);frames.push(frame)}
  const order=[...fields].sort((a,b)=>(b==='seconds')-(a==='seconds'));
+ // Capture only the marked rectangles. Repeated full-HD canvases produced
+ // large temporary allocations that can cause periodic collection stalls.
+ for(let i=0;i<(config.reader==='segments'?3:1);i++){
+  if(i)await new Promise(resolve=>setTimeout(resolve,50));
+  if(!ready())throw Error('Camera disconnected.');
+  const images={};for(const key of order)images[key]=crop(video,config.regions[key]);
+  frames.push({images,time:Date.now()});
+ }
+ const sampledAt=frames[Math.floor(frames.length/2)].time;
  const result={};for(const key of order){
-  const crops=frames.map(frame=>crop(frame,config.regions[key])),image=crops.length===3?medianCrop(crops):crops[0];
+  const crops=frames.map(frame=>frame.images[key]),image=crops.length===3?medianCrop(crops):crops[0];
   const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
   if(config.reader==='segments')reading=await decodeSegments(image,key);
   else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
-  const confidence=reading?.confidence||0;result[key]={value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
+  const confidence=reading?.confidence||0;result[key]={sampledAt,value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
   const accepted=confirmed[key],observed=result[key].value;
   if(observed!==null)byId(key+'Value').textContent=format(key,observed);
   else if(accepted)byId(key+'Value').textContent=format(key,accepted.value);
@@ -175,22 +183,51 @@ function stable(key,value,time){
  if(value===null){if(previous&&time-previous.time>10000)delete candidates[key];return false}
  if(key==='seconds'){
   const accepted=confirmed[key],elapsed=previous?(time-previous.time)/1000:0;
-  // Compare with the last accepted clock, not an unconfirmed bad sample.
-  // A plausible next second updates immediately after initial confirmation.
-  if(accepted){const age=(time-accepted.time)/1000,drop=accepted.value-value;
-   if(age<=10&&drop>=0&&drop<=Math.ceil(age)+1){candidates[key]={value,time,count:2};return true}
-   // A real clock correction/reset needs three matching fresh observations.
-   const count=previous&&previous.value===value?previous.count+1:1;
-   candidates[key]={value,time,count};return count>=3;
+  const same=previous&&previous.value===value;
+  const observedAt=same?previous.observedAt??previous.time:time;
+  const count=same?previous.count+1:1;
+  if(accepted){
+   const age=(time-(accepted.changedAt??accepted.time))/1000,drop=accepted.value-value;
+   // Duplicate samples do not reset this budget. Allow one real second per
+   // second, with a small allowance for camera jitter; never replay a backlog.
+   const budget=Math.min(Math.max(0,Math.floor(age+.35)),Math.max(0,Math.ceil((time-accepted.time)/1000)));
+   if(drop===0||(drop>0&&drop<=budget)){
+    candidates[key]={value,time,observedAt,count:Math.max(2,count)};return true;
+   }
+   candidates[key]={value,time,observedAt,count};
+   // A deliberate clock correction/reset requires a steady reading, rather
+   // than accepting a quick run of values that would speed up the countdown.
+   return count>=3&&time-observedAt>=800;
   }
   const consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;
-  candidates[key]={value,time,count:consistent?previous.count+1:1};return candidates[key].count>=2;
+  candidates[key]={value,time,observedAt,count:consistent?previous.count+1:1};
+  return candidates[key].count>=2;
  }
  const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
  candidates[key]={value,time,count,history};return count>=2;
 }
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
-function apply(result,automatic){const state=readState(),time=Date.now();if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));let changed=false;for(const key of activeKeys()){const value=result[key]?.value??null;if(value===null)continue;if(automatic&&!stable(key,value,time))continue;if(state[key]!==value){state[key]=value;changed=true}confirmed[key]={value,time};if(key==='seconds'){state.running=false;state.stamp=time;changed=true}}if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));byId('status').textContent='Updated overlay at '+new Date().toLocaleTimeString()}for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!==null&&(!automatic||candidates[key]?.count>=2))byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);return changed}
+function apply(result,automatic){
+ const state=readState(),time=Date.now();
+ if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));
+ let changed=false;
+ for(const key of activeKeys()){
+  const reading=result[key],value=reading?.value??null;if(value===null)continue;
+  const sampleTime=reading.sampledAt??time;
+  // A completed old frame must never masquerade as the current clock.
+  if(automatic&&key==='seconds'&&(time-sampleTime>700||sampleTime<(confirmed[key]?.time??0)))continue;
+  if(automatic&&!stable(key,value,sampleTime))continue;
+  const prior=confirmed[key],transition=!prior||prior.value!==value;
+  const changedAt=transition?(automatic?candidates[key]?.observedAt??sampleTime:sampleTime):prior.changedAt??prior.time;
+  confirmed[key]={value,time:sampleTime,changedAt};
+  if(state[key]!==value){state[key]=value;changed=true}
+  if(key==='seconds'&&state.running){state.running=false;changed=true}
+ }
+ // Unchanged samples need no storage write or overlay redraw.
+ if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
+ for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
+ return changed;
+}
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().some(k=>result[k].value!==null);const complete=activeKeys().every(k=>result[k].value!==null);status(verified?(complete?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Clear fields are ready. Start automatic updates to update those fields while retrying the others.'):'No clear fields yet. Check the crop previews and test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
 async function start(){
  if(!verified||!ready()||busy)return;
@@ -216,8 +253,9 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v6 · priority clock + whole seconds';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v7 · steady clock updates';
 buttons();
+
 
 
 
