@@ -210,8 +210,21 @@ input[type=range]{padding:0}
   return result;
  }
  function findEagle(){for(const group of source())for(const item of group)if(/eagles?/i.test(item.name||'')&&item.logo)return item;return null}
- function importEagle(){const a=findEagle();if(!a){msg('No saved Eagles logo found in this browser. Upload the image above instead.');return}save({leftName:a.name||'EAGLES',leftLogo:a.logo,...(a.color?{leftColor:a.color}:{})});msg('Eagles logo imported from the volleyball scoreboard.')}
- function importBoth(){for(const group of source())if(group[0].name&&group[1].name){const v={};for(const [i,side] of ['left','right'].entries()){const a=group[i];v[side+'Name']=a.name;if(a.logo)v[side+'Logo']=a.logo;if(/^#[0-9a-fA-F]{6}$/.test(a.color||''))v[side+'Color']=a.color}save(v);msg('Teams imported from your existing volleyball scoreboard.');return}msg('No saved scoreboard teams found in this browser.')}
+ async function smallerLogo(src){
+  if(!src||src.length<24000)return src;
+  try{
+   const img=new Image();img.src=src;await img.decode();
+   const scale=Math.min(1,300/img.naturalWidth,300/img.naturalHeight),c=document.createElement('canvas');
+   c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+   return c.toDataURL('image/webp',.65)
+  }catch(e){msg('Unable to compress imported image. Upload a smaller logo here.');return src}
+ }
+ async function importEagle(){const a=findEagle();if(!a){msg('No saved Eagles logo found in this browser. Upload the image above instead.');return}
+  save({leftName:a.name||'EAGLES',leftLogo:await smallerLogo(a.logo),...(a.color?{leftColor:a.color}:{})});msg('Eagles logo imported from the volleyball scoreboard.')}
+ async function importBoth(){for(const group of source())if(group[0].name&&group[1].name){const v={};
+  for(const [i,side] of ['left','right'].entries()){const a=group[i];v[side+'Name']=a.name;if(a.logo)v[side+'Logo']=await smallerLogo(a.logo);if(/^#[0-9a-fA-F]{6}$/.test(a.color||''))v[side+'Color']=a.color}
+  save(v);msg('Teams imported from your existing volleyball scoreboard.');return}msg('No saved scoreboard teams found in this browser.')}
  if(isPreview)document.body.classList.add('preview');
  if(isControl){
   document.body.classList.add('controller');
