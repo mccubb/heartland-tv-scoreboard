@@ -190,9 +190,9 @@ input[type=range]{padding:0}
  function sync(){
   const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
   if(changed){
-   if(isControl||isPreview||isTest){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
+   if(isPreview||isTest){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
    else visibility(!!d.visible,!!d.replay);
-   if(!isControl&&!isPreview&&!isTest&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
+   if(!isPreview&&!isTest&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
    oldTick=d.tick;oldVisible=!!d.visible;
   }
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
@@ -290,7 +290,7 @@ input[type=range]{padding:0}
  });
  if(isControl&&!qs.has('remote'))el('remoteStatus').textContent='Separate-computer sync is off for local testing';
  paint();sync();
- if(!isControl)setInterval(()=>{paint();sync()},550);
+ setInterval(()=>{if(!isControl)paint();sync()},250);
  /* No preview iframe: the controller changes the same stage elements immediately. */
  if(isControl){broadcast?.postMessage({type:'ping'});setInterval(()=>broadcast?.postMessage({type:'ping'}),1500);setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Open the overlay in another tab on this laptop';el('overlayStatus').style.color='#64748b'}},5000);}
 })();
