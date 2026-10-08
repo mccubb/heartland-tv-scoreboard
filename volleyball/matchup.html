@@ -117,6 +117,24 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 .word{flex:0 1 65%;width:65%;min-width:0;justify-content:center}
 .big{margin-top:1px}
 #versus{flex:0 0 8%;font-size:clamp(22px,3vw,48px)}
+
+/* V21 — rebuild the five-part composition to follow the NBA reference:
+   LOGO | SCHOOL/TEAM | VS | SCHOOL/TEAM | LOGO. No stretchy team halves. */
+#main{display:grid;grid-template-columns:19% 27% 8% 27% 19%;grid-template-rows:100%;align-items:center;height:88%;padding:0;gap:0}
+#main .side{display:contents}
+#main .side .mark,#main .side .word{position:relative;z-index:2;min-width:0;box-sizing:border-box}
+#main .side.left .mark{grid-column:1;grid-row:1;padding:2% 5% 2% 12%}
+#main .side.left .word{grid-column:2;grid-row:1;padding:0 2% 0 0}
+#main .side.right .word{grid-column:4;grid-row:1;padding:0 0 0 7%}
+#main .side.right .mark{grid-column:5;grid-row:1;padding:2% 12% 2% 5%}
+#main .mark{height:100%;width:100%;display:flex;align-items:center;justify-content:center;flex:none}
+#main .mark img{display:block;width:100%;height:94%;max-width:100%;max-height:94%;object-fit:contain}
+#main .mark img[hidden]{display:none}
+#main .word{height:100%;width:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;flex:none;overflow:hidden}
+#main .small{max-width:100%;letter-spacing:.18em}
+#main .big{max-width:100%;line-height:1.02;margin-top:3px}
+#versus{grid-column:3;grid-row:1;width:100%;height:62%;display:flex;align-items:center;justify-content:center;min-width:0;border-left:1px solid rgba(204,216,233,.33);border-right:1px solid rgba(204,216,233,.33);font-size:clamp(24px,3vw,47px)}
+#footer{height:12%;padding:0 12px;line-height:1.1}
 </style></head>
 <body>
 <div id="stage"><section id="banner">
@@ -125,7 +143,7 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
 <div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
 <div id="editor">
-<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=20" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=21" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
 <p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
 <div class="grid">
@@ -133,7 +151,7 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=20"></script><script src="./matchup-eagle.js?v=20"></script>
+<script src="./logo.js?v=21"></script><script src="./matchup-eagle.js?v=21"></script>
 <script>
 (function(){
 'use strict';
@@ -156,11 +174,11 @@ function logo(side,s){let custom=s[side+'Logo']||'',name=safeText(s[side+'Name']
  return '';
 }
 function fitText(){
- const b=$('banner'),scale=Math.max(.32,Math.min(1,b.getBoundingClientRect().width/990));
+ const b=$('banner'),scale=Math.max(.32,Math.min(1,b.getBoundingClientRect().width/1120));
  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
  for(const side of ['left','right']){
   const word=$(side+'Name').parentElement, available=Math.max(35,word.clientWidth-3);
-  for(const [id,base,min,weight,spacing] of [[side+'Small',21,8,600,.14],[side+'Name',54,12,800,.01]]){
+  for(const [id,base,min,weight,spacing] of [[side+'Small',21,8,600,.18],[side+'Name',54,12,800,.01]]){
    const node=$(id),value=node.textContent||'',max=base*scale;
    let size=Math.max(min,max);
    while(size>min){
