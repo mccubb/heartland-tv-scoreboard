@@ -30,7 +30,16 @@ function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
  const prepared=segmentPixels(image);
- const readings=[80,110,145,185,220].map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
+ const limits=[80,110,145,185,220];
+ // The left physical score display renders 0 with separated/slanted outer bars
+ // that can look like two 1s after projection. Detect the complete hollow 0
+ // shape before digit splitting. Requiring agreement at 3 exposure cutoffs
+ // keeps this narrow and prevents ordinary 11/17 readings from being changed.
+ if(key==='homeScore'){
+  let zeroVotes=0;for(const limit of limits)if(looksLikeSingleZero(prepared,image.width,image.height,limit))zeroVotes++;
+  if(zeroVotes>=3)return {value:0,text:'0',confidence:98,method:'Seven-segment · left zero lock'};
+ }
+ const readings=limits.map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
  if(!readings.length)return null;
  const groups=new Map();for(const r of readings){const g=groups.get(r.text)||[];g.push(r);groups.set(r.text,g)}
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
@@ -46,6 +55,29 @@ function segmentPixels(image){
  for(let i=0;i<255;i++){count+=hist[i];left+=i*hist[i];if(!count||count===gray.length)continue;const delta=left/count-(sum-left)/(gray.length-count),variance=count*(gray.length-count)*delta*delta;if(variance>best){best=variance;threshold=i}}
  // Crops are contrast-normalized. Do not count mid-gray screen shadows as bars.
  return {gray,threshold};
+}
+function looksLikeSingleZero(prepared,w,h,limit){
+ const threshold=Math.min(prepared.threshold,limit),gray=prepared.gray;
+ let left=w,right=-1,top=h,bottom=-1,count=0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);count++}
+ if(right<left||bottom<top)return false;
+ const gw=right-left+1,gh=bottom-top+1,ratio=gw/gh;
+ if(gh<12||ratio<.28||ratio>.95||count<gh*1.1)return false;
+ const density=(x0,y0,x1,y1)=>{let on=0,total=0;const xa=Math.floor(left+x0*gw),xb=Math.ceil(left+x1*gw),ya=Math.floor(top+y0*gh),yb=Math.ceil(top+y1*gh);for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(gray[y*w+x]<=threshold)on++}return on/Math.max(1,total)};
+ // Broad regions tolerate the slant/perspective of the physical left display.
+ const outer=[
+  density(.18,0,.82,.24),      // top
+  density(.62,.12,1,.50),      // upper right
+  density(.62,.50,1,.88),      // lower right
+  density(.18,.76,.82,1),      // bottom
+  density(0,.50,.38,.88),      // lower left
+  density(0,.12,.38,.50)       // upper left
+ ];
+ const middle=density(.24,.39,.76,.61);
+ const sideBalance=Math.min(outer[1]+outer[2],outer[4]+outer[5])/Math.max(.001,Math.max(outer[1]+outer[2],outer[4]+outer[5]));
+ const strong=outer.filter(v=>v>=.075).length;
+ const avg=outer.reduce((a,v)=>a+v,0)/outer.length;
+ return strong===6&&avg>=.11&&sideBalance>=.50&&middle<=Math.max(.11,avg*.58);
 }
 function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  const w=image.width,h=image.height,gray=prepared.gray,threshold=Math.min(prepared.threshold,limit);
@@ -177,7 +209,7 @@ async function decodeSegments(image,key){
  const lane=false?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,looksLikeSingleZero,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
