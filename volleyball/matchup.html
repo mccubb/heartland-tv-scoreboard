@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland TV Matchup</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland TV Matchup</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif}
 body{background:transparent;overflow:hidden;color:white}
@@ -48,6 +48,42 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 #status{font-size:13px;font-weight:800;color:#18588e}
 .note{font-size:13px;color:#586677;line-height:1.4}
 @media(max-width:650px){.grid,.row{grid-template-columns:1fr}.side{gap:1vw;padding:1%}.mark{flex-basis:22%}.big{font-size:3vw}}
+
+/* Broadcast finish: the location is part of the same panel, not a footer box. */
+#banner{
+ background:linear-gradient(180deg,rgba(255,255,255,.10) 0%,transparent 19%),
+ linear-gradient(115deg,rgba(43,68,97,.38),transparent 27%,rgba(0,0,0,.06) 53%,rgba(31,57,86,.29) 100%),
+ linear-gradient(180deg,rgba(14,24,38,.97),rgba(7,14,24,.97));
+ border:1px solid rgba(206,225,247,.30);
+ box-shadow:inset 0 1px rgba(255,255,255,.17),inset 0 -1px rgba(214,232,255,.08),0 7px 20px rgba(0,0,0,.35);
+ isolation:isolate;
+}
+#banner::before{content:"";position:absolute;left:0;right:0;top:0;height:45%;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.075),transparent);opacity:.78}
+#main{height:100%;padding-bottom:13%;position:relative;z-index:2}
+.side{padding:1.6%;gap:1.5%}
+.side.left{border-left:4px solid var(--lc,#185a99);background:linear-gradient(90deg,rgba(23,58,95,.26),transparent 75%)}
+.side.right{border-right:4px solid var(--rc,#185a99);background:linear-gradient(270deg,rgba(23,58,95,.26),transparent 75%)}
+.mark{height:86%}
+.mark img{filter:drop-shadow(0 3px 6px rgba(0,0,0,.42)) drop-shadow(0 0 5px rgba(220,234,255,.14))}
+.word{position:relative;z-index:2}
+.small{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:600;letter-spacing:.14em;color:#cbd5e2!important;line-height:1.08;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.big{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;letter-spacing:.01em;color:#f9fbff!important;line-height:1;text-shadow:0 2px 4px rgba(0,0,0,.5),0 0 12px rgba(255,255,255,.10)}
+#versus{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;border-left:1px solid rgba(190,208,231,.23);border-right:1px solid rgba(190,208,231,.23);background:linear-gradient(90deg,transparent,rgba(4,10,19,.26),transparent);color:#e8eff9;text-shadow:0 0 8px rgba(198,222,255,.19)}
+#footer{
+ position:absolute;z-index:3;bottom:4%;left:50%;transform:translateX(-50%);width:72%;
+ height:11%;min-height:0;padding:2% 12px 0;
+ background:transparent;border:0;
+ font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:600;
+ font-size:clamp(9px,.9vw,15px);letter-spacing:.18em;color:#c5d0de;
+ text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ text-shadow:0 1px 3px rgba(0,0,0,.6)
+}
+#footer::before{
+ content:"";position:absolute;left:7%;right:7%;top:0;height:1px;
+ background:linear-gradient(90deg,transparent 0%,rgba(174,196,225,.18) 16%,rgba(207,226,249,.70) 50%,rgba(174,196,225,.18) 84%,transparent 100%);
+ box-shadow:0 0 6px rgba(176,210,249,.22);
+}
+body.controller #stage{background:radial-gradient(ellipse at 50% 12%,rgba(37,67,104,.28),transparent 57%),linear-gradient(#071422 0 51%,#16283a 53%,#86694c 54%,#b79469 100%)}
 </style></head>
 <body>
 <div id="stage"><section id="banner">
@@ -56,7 +92,7 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
 <div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
 <div id="editor">
-<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=14" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=15" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
 <p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
 <div class="grid">
@@ -64,7 +100,7 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=14"></script><script src="./matchup-eagle.js?v=14"></script>
+<script src="./logo.js?v=15"></script><script src="./matchup-eagle.js?v=15"></script>
 <script>
 (function(){
 'use strict';
@@ -91,12 +127,12 @@ function fitText(){
  const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
  for(const side of ['left','right']){
   const word=$(side+'Name').parentElement, available=Math.max(35,word.clientWidth-3);
-  for(const [id,base,min,weight,spacing] of [[side+'Small',20,8,700,.20],[side+'Name',48,12,900,-.035]]){
+  for(const [id,base,min,weight,spacing] of [[side+'Small',20,8,600,.14],[side+'Name',50,12,800,.01]]){
    const node=$(id),value=node.textContent||'',max=base*scale;
    let size=Math.max(min,max);
    while(size>min){
-    ctx.font=weight+' '+size+'px Arial';
-    const width=ctx.measureText(value).width+Math.max(0,value.length-1)*Math.abs(spacing)*size;
+    ctx.font=weight+' '+size+'px "Barlow Condensed", "Arial Narrow", Arial, sans-serif';
+    const width=ctx.measureText(value).width+Math.max(0,value.length-1)*Math.max(0,spacing)*size;
     if(width<=available)break;
     size-=.5;
    }
