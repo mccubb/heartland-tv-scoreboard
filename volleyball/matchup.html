@@ -250,7 +250,7 @@ input[type=range]{padding:0}
   el('replay').addEventListener('click',()=>trigger(true,true));
   el('importEagles').addEventListener('click',importEagle);
   el('importTeams').addEventListener('click',importBoth);
-  if(!get(CONFIG).leftLogo){const eagle=findEagle();if(eagle)save({leftName:eagle.name||'EAGLES',leftLogo:eagle.logo})}
+  // Never overwrite the user's chosen left/right teams at startup.
  }
  window.addEventListener('storage',e=>{if(e.key===CONFIG)paint();if(e.key===DISPLAY)sync()});
  window.addEventListener('message',event=>{if(event.origin!==location.origin||!event.data?.htvMatchup||isControl)return;fromRemoteConfig(event.data.config);fromRemoteDisplay(event.data.display);});
