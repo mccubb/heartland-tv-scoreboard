@@ -165,7 +165,7 @@ input[type=range]{padding:0}
  function visibility(next,replay){
   const m=el('match');clearTimeout(timer);m.classList.remove('shown','entering','hiding');
   void m.offsetWidth;
-  if(next){m.classList.add('entering');timer=setTimeout(()=>{m.classList.remove('entering');m.classList.add('shown')},900)}
+  if(next){m.style.visibility='';m.style.opacity='';m.classList.add('entering');timer=setTimeout(()=>{m.classList.remove('entering');m.classList.add('shown')},900)}
   else if(oldVisible===null){m.style.visibility='hidden';m.style.opacity='0';}
   else{m.style.visibility='';m.style.opacity='';m.classList.add('hiding');timer=setTimeout(()=>{m.classList.remove('hiding');m.style.visibility='hidden';m.style.opacity='0'},710)}
  }
@@ -180,7 +180,7 @@ input[type=range]{padding:0}
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
  }
  function trigger(visible,replay){
-  try{localStorage.setItem(DISPLAY,JSON.stringify({visible:visible,tick:Date.now(),replay:!!replay}));sync()}catch(e){msg('Could not update show/hide state.')}
+  try{localStorage.setItem(DISPLAY,JSON.stringify({visible:visible,tick:Date.now()+Math.random(),replay:!!replay}));sync()}catch(e){msg('Could not update show/hide state.')}
  }
  async function upload(side,input){
   const f=input.files&&input.files[0];if(!f)return;
