@@ -179,9 +179,9 @@ input[type=range]{padding:0}
  function sync(){
   const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
   if(changed){
-   if(isControl||isPreview){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
+   if(isControl||isPreview||isTest){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
    else visibility(!!d.visible,!!d.replay);
-   if(!isControl&&!isPreview&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
+   if(!isControl&&!isPreview&&!isTest&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
    oldTick=d.tick;oldVisible=!!d.visible;
   }
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
@@ -276,7 +276,6 @@ input[type=range]{padding:0}
   presence:(v,t)=>{if(v?.active&&Number.isFinite(t)&&Date.now()-t<42000){onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}}
  });
  paint();sync();
- if(isTest){const d=showState();if(!d.visible){oldVisible=false;const m=el('match');m.style.visibility='';m.style.opacity='';m.classList.add('shown');}}
  if(!isControl)setInterval(()=>{paint();sync()},550);
  /* No preview iframe: the controller changes the same stage elements immediately. */
  if(isControl){broadcast?.postMessage({type:'ping'});setInterval(()=>broadcast?.postMessage({type:'ping'}),1500);setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Open the overlay in another tab on this laptop';el('overlayStatus').style.color='#64748b'}},5000);}
