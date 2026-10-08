@@ -1,299 +1,156 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark light">
-<title>Heartland TV • Volleyball Matchup</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland TV Matchup</title>
 <style>
-*{box-sizing:border-box}
-html,body{width:100%;height:100%;margin:0}
-body{font-family:Arial,Helvetica,sans-serif;background:transparent;color:#fff;overflow:hidden}
-button,input{font:inherit}
-button{cursor:pointer}
-button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #56abff;outline-offset:3px}
-#stage{position:relative;width:100%;height:100%;pointer-events:none}
-#match{--left-accent:#1561a2;--right-accent:#a53b3e;--opacity:.93;--w:85%;--h:27%;--y:50%;position:absolute;left:50%;top:var(--y);width:var(--w);height:var(--h);min-height:0;overflow:hidden;visibility:hidden;opacity:0;transform:translate(-50%,-50%);background:rgba(7,14,23,var(--opacity));border:1px solid rgba(223,231,241,.35);box-shadow:0 12px 25px rgba(0,0,0,.46),inset 0 1px rgba(255,255,255,.09);display:flex;flex-direction:column}
-#match:before{position:absolute;content:"";inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent 48%,rgba(0,0,0,.16));z-index:4}
-#match:after{position:absolute;content:"";bottom:0;left:-35%;width:30%;height:2px;background:#f4faff;box-shadow:0 0 10px #b8d7ff;z-index:8;opacity:0}
-#match.entering:after{animation:sweep 820ms 150ms ease-out}
-#match.shown{visibility:visible;opacity:1}
-#match.entering{visibility:visible;animation:appear 850ms cubic-bezier(.19,.9,.21,1) both}
-#match.hiding{visibility:visible;animation:depart 680ms cubic-bezier(.57,.06,.63,.32) both}
-@keyframes appear{0%{opacity:0;clip-path:inset(0 50% 0 50%);transform:translate(-50%,-46%) scale(.975);filter:blur(6px)}35%{opacity:1;filter:blur(0)}100%{opacity:1;clip-path:inset(0 0 0 0);transform:translate(-50%,-50%) scale(1)}}
-@keyframes depart{0%{opacity:1;clip-path:inset(0 0 0 0);transform:translate(-50%,-50%) scale(1)}68%{opacity:.95}100%{opacity:0;clip-path:inset(0 50% 0 50%);transform:translate(-50%,-54%) scale(.965);filter:blur(4px)}}
-@keyframes sweep{0%{transform:translateX(0);opacity:0}25%{opacity:.95}100%{transform:translateX(500%);opacity:0}}
-.match-main{display:flex;flex:1;min-height:0}
-.team{display:flex;align-items:center;min-width:0;flex:1;gap:min(1.9vw,30px);padding:0 2.3%;position:relative}
-.team:before{content:"";position:absolute;inset:0;opacity:.34;pointer-events:none}
-.team-left:before{background:linear-gradient(90deg,var(--left-accent),transparent 75%)}
-.team-right:before{background:linear-gradient(270deg,var(--right-accent),transparent 75%)}
-.team-left{border-left:7px solid var(--left-accent)}
-.team-right{border-right:7px solid var(--right-accent);justify-content:flex-end}
-.logo-slot{flex:0 0 min(11vw,185px);height:78%;display:grid;place-items:center;min-width:0;position:relative;z-index:2}
-.logo-slot img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.33))}
-.logo-slot img[hidden],.logo-preview[hidden]{display:none!important}
-.logo-placeholder{font-size:clamp(25px,5vw,92px);font-weight:900;color:#fff;opacity:.88;line-height:1}
-.wordmark{min-width:0;position:relative;z-index:2;line-height:1.05}
-.kicker{font-size:clamp(9px,1.12vw,20px);font-weight:700;letter-spacing:.32em;color:#c6cfda;margin-bottom:.55vw;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-.team-name{font-size:clamp(13px,2.62vw,51px);font-weight:900;font-stretch:condensed;letter-spacing:-.028em;color:#f5f7fa;text-shadow:0 2px 3px rgba(0,0,0,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.center{flex:0 0 8.2%;display:flex;align-items:center;justify-content:center;position:relative;background:linear-gradient(90deg,rgba(0,0,0,.12),rgba(2,8,17,.65) 50%,rgba(0,0,0,.12))}
-.center:before,.center:after{content:"";position:absolute;top:22%;bottom:22%;width:1px;background:rgba(218,232,250,.35)}
-.center:before{left:5%}.center:after{right:5%}
-.vs{color:#dbe2ec;font-weight:800;font-size:clamp(14px,2.1vw,40px);letter-spacing:-.055em}
-.match-footer{height:16%;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;border-top:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.29);font-size:clamp(7px,.86vw,16px);letter-spacing:.28em;color:#bac3d0;text-align:center;padding:0 12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#match.entering .team-left .logo-slot{animation:logoFromLeft 660ms 130ms both}
-#match.entering .team-right .logo-slot{animation:logoFromRight 660ms 130ms both}
-#match.entering .vs{animation:vsPop 450ms 390ms both}
-@keyframes logoFromLeft{from{opacity:0;transform:translateX(-28px) scale(.87)}to{opacity:1;transform:translateX(0) scale(1)}}
-@keyframes logoFromRight{from{opacity:0;transform:translateX(28px) scale(.87)}to{opacity:1;transform:translateX(0) scale(1)}}
-@keyframes vsPop{0%{opacity:0;transform:scale(.45)}65%{opacity:1;transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}
-body.preview{background:radial-gradient(ellipse at 50% 0,#162943,#070e1b 70%);}
-body.preview #stage:before,body.controller #stage:before{content:"";position:absolute;inset:46% -15% -40%;background:linear-gradient(90deg,transparent 0 22%,rgba(255,255,255,.26) 22.2% 22.5%,transparent 22.8% 77%,rgba(255,255,255,.24) 77.2% 77.5%,transparent 77.8%),linear-gradient(0deg,#a57c50,#d3a778 40%,#bb8f60);transform:perspective(400px) rotateX(58deg);opacity:.72;border-top:2px solid #f8eadb}
-body.preview #stage:after,body.controller #stage:after{content:"";position:absolute;left:44%;right:44%;bottom:0;top:60%;border-left:2px solid rgba(255,255,255,.42);border-right:2px solid rgba(255,255,255,.42);transform:perspective(450px) rotateX(54deg);opacity:.6}
-body.controller{overflow:auto;height:auto;min-height:100%;background:#eaf0f6;color:#1c2734}
-#controlView{display:none}
-body.controller #stage{display:block;width:100%;height:auto;aspect-ratio:16/9;overflow:hidden;border-radius:10px;background:radial-gradient(ellipse at 50% 0,#162943,#070e1b 70%)}
-body.controller #controlView{display:block;max-width:1130px;margin:auto;padding:20px 16px 45px}
-.head{background:linear-gradient(100deg,#0a2947,#124d7b);color:white;padding:24px;border-radius:12px}
-.head h1{margin:0 0 7px;font-size:clamp(21px,3vw,30px)}
-.head p{margin:0;opacity:.86}
-.head a{color:#e5f5ff}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
-.panel{min-width:0;background:white;border:1px solid #d7e0ea;border-radius:12px;padding:19px;box-shadow:0 3px 12px rgba(20,35,55,.06)}
-.panel.wide{grid-column:1/-1}
-.panel h2{font-size:18px;margin:0 0 12px}
-label{display:block;font-size:13px;font-weight:bold;color:#3d4a5a;margin:11px 0 5px}
-input{width:100%;border:1px solid #c8d1dc;border-radius:7px;background:white;color:#182330;padding:11px;font-size:16px}
-input[type=color]{padding:3px;height:43px}
-input[type=range]{padding:0}
-.fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.actions{display:flex;flex-wrap:wrap;gap:10px}
-.actions button{min-height:46px;padding:12px 19px;border:0;border-radius:9px;font-weight:bold;background:#143b5d;color:white}
-.actions button.secondary{background:#4e6174}
-.actions button.show{background:#13815f}
-.actions button.hide{background:#b42c36}
-.actions button:disabled{opacity:.5}
-.mini{font-size:13px;color:#576879;line-height:1.48}
-#msg{min-height:1.4em;color:#20547d;font-size:13px;font-weight:bold}
-.status{display:inline-block;background:#fce6e7;color:#9d2a35;border-radius:99px;padding:5px 11px;font-size:12px;font-weight:bold;margin-left:10px}
-.status.on{background:#ddf6e9;color:#16714c}
-#previewFrame{display:block;width:100%;aspect-ratio:16/9;border:0;background:#081020;border-radius:10px;margin-top:12px}
-.logo-preview{width:72px;height:65px;object-fit:contain;background:#f0f4f8;border:1px solid #dce3ea;border-radius:5px;margin-top:10px;padding:5px}
-.logo-actions{display:flex;align-items:center;gap:12px}
-.notice{border-left:4px solid #e4a12a;background:#fff6df;padding:12px 16px;margin-top:16px;border-radius:6px;color:#55432a;font-size:13px;line-height:1.55}
-@media(max-width:740px){.grid{grid-template-columns:1fr}.panel.wide{grid-column:auto}.fieldrow{grid-template-columns:1fr 1fr}.head{padding:18px}.team{padding:0 1.4%;gap:1vw}.team-left,.team-right{border-width:3px}.logo-slot{flex-basis:12vw}.kicker{letter-spacing:.12em}}
-@media(prefers-reduced-motion:reduce){#match.entering{animation:appear 850ms cubic-bezier(.19,.9,.21,1) both}#match.hiding{animation:depart 680ms both}#match.entering .logo-slot,#match.entering .vs{animation:none}}
-</style>
-</head>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif}
+body{background:transparent;overflow:hidden;color:white}
+#stage{position:relative;width:100vw;height:100vh;overflow:hidden}
+#banner{position:absolute;left:50%;top:50%;width:85%;height:27%;transform:translate(-50%,-50%);display:flex;flex-direction:column;overflow:hidden;visibility:hidden;opacity:0;filter:drop-shadow(0 9px 15px rgba(0,0,0,.55));background:rgba(8,16,27,.94);border:1px solid #637284;will-change:clip-path,opacity}
+#banner.on{visibility:visible;opacity:1;clip-path:inset(0)}
+#banner.opening{visibility:visible;animation:unfold .72s cubic-bezier(.2,.75,.23,1) both}
+#banner.closing{visibility:visible;animation:fold .60s ease-in both}
+@keyframes unfold{0%{opacity:0;clip-path:inset(0 50%);filter:blur(4px)}30%{opacity:1}100%{opacity:1;clip-path:inset(0)}}
+@keyframes fold{0%{opacity:1;clip-path:inset(0)}75%{opacity:.8}100%{opacity:0;clip-path:inset(0 50%)}}
+#main{height:83%;width:100%;display:flex;align-items:stretch;min-height:0}
+.side{flex:1;min-width:0;display:flex;align-items:center;gap:2vw;padding:2%;position:relative}
+.side.left{border-left:6px solid var(--lc,#185a99);background:linear-gradient(90deg,color-mix(in srgb,var(--lc,#185a99) 40%,#0a121b),#0a121b)}
+.side.right{border-right:6px solid var(--rc,#185a99);justify-content:flex-end;background:linear-gradient(270deg,color-mix(in srgb,var(--rc,#185a99) 40%,#0a121b),#0a121b)}
+.mark{flex:0 0 28%;height:86%;display:flex;align-items:center;justify-content:center;min-width:0}
+.mark img{max-height:100%;max-width:100%;object-fit:contain}
+.mark img[hidden]{display:none}
+.mark span{font-size:clamp(24px,5vw,80px);font-weight:900}
+.word{min-width:0;flex:1}
+.small{font-size:clamp(9px,1.05vw,18px);letter-spacing:.2em;color:#c5cbd5;font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big{font-size:clamp(16px,2.6vw,48px);font-weight:900;letter-spacing:-.025em;margin-top:6px;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+#versus{flex:0 0 9%;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,2vw,38px);font-weight:900;color:#dce3ef;border-left:1px solid #576374;border-right:1px solid #576374}
+#footer{height:17%;background:rgba(0,0,0,.38);border-top:1px solid #314254;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,.83vw,15px);letter-spacing:.24em;color:#b9c6d6;text-transform:uppercase}
+body.controller{height:auto;overflow:auto;background:#eaf0f4;color:#182638}
+body.controller #stage{width:100%;height:auto;aspect-ratio:16/9;background:linear-gradient(#101a2b 0 52%,#8a6747 53%,#bb9465);border-radius:9px}
+body.controller #banner{visibility:hidden;opacity:0}
+body.controller #banner.on{visibility:visible;opacity:1}
+#editor{display:none}
+body.controller #editor{display:block;max-width:1080px;margin:auto;padding:18px}
+header{background:#123d68;color:#fff;padding:22px;border-radius:9px;margin-bottom:14px}
+h1{font-size:23px;margin:0 0 8px}
+h2{font-size:18px;margin:0 0 12px}
+a{color:#175c98}
+header a{color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.card{background:white;border:1px solid #dce4ec;border-radius:9px;padding:18px;margin-top:14px}
+.wide{grid-column:1/-1}
+label{display:block;font-weight:700;font-size:13px;color:#495569;margin:10px 0 5px}
+input{padding:10px;border:1px solid #bfcedd;border-radius:6px;font-size:16px;width:100%}
+input[type=color]{padding:2px;height:42px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.buttons{display:flex;gap:9px;flex-wrap:wrap}
+button{background:#22547e;color:white;border:0;padding:13px 18px;border-radius:7px;font-weight:800;cursor:pointer}
+button.green{background:#18825a}button.red{background:#af3239}button.gray{background:#506176}
+#livePreview{margin-top:12px;border-radius:10px;overflow:hidden;background:#0b1725}
+#status{font-size:13px;font-weight:800;color:#18588e}
+.note{font-size:13px;color:#586677;line-height:1.4}
+@media(max-width:650px){.grid,.row{grid-template-columns:1fr}.side{gap:1vw;padding:1%}.mark{flex-basis:22%}.big{font-size:3vw}}
+</style></head>
 <body>
-<div id="stage" aria-label="Transparent volleyball matchup graphic">
- <section id="match" aria-label="Volleyball matchup">
-  <div class="match-main">
-   <div class="team team-left">
-    <div class="logo-slot"><img id="leftLogo" alt=""><span class="logo-placeholder" id="leftInitial">E</span></div>
-    <div class="wordmark"><div class="kicker" id="leftKicker">VISITORS</div><div class="team-name" id="leftName">EAGLES</div></div>
-   </div>
-   <div class="center"><span class="vs">VS</span></div>
-   <div class="team team-right">
-    <div class="wordmark"><div class="kicker" id="rightKicker">HOME</div><div class="team-name" id="rightName">OPPONENT</div></div>
-    <div class="logo-slot"><img id="rightLogo" alt=""><span class="logo-placeholder" id="rightInitial">O</span></div>
-   </div>
-  </div>
-  <div class="match-footer" id="footer">VOLLEYBALL • GAME DAY</div>
- </section>
-</div>
-<div id="controlView">
- <div class="head"><h1>HEARTLAND TV — MATCHUP CONTROL <span id="status" class="status">HIDDEN</span></h1><p>TV-style matchup screen for volleyball. <a href="./matchup.html?v=10" target="_blank">Open transparent overlay ↗</a> · <a href="./index.html" target="_blank">Volleyball scoreboard ↗</a></p></div>
- <div class="grid">
-  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus" style="color:#087a55">Same-browser sync ready</b> · <b id="overlayStatus">Open the overlay in another tab on this laptop</b><div style="margin-top:4px"><span id="remoteStatus" style="font-size:12px;color:#64748b">Separate-computer sync: connecting… (optional)</span></div></div><p class="mini">The preview below is now the actual graphic, directly connected to the inputs (no separate embedded page). The preview stays visible while editing even if the broadcast overlay is hidden. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1&amp;v=10" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken. For the first test, open both links in Chrome on the <strong>same laptop</strong>.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><div id="previewMount" aria-label="Live matchup preview" style="background:#081020;border-radius:10px;overflow:hidden;margin-top:12px"></div></section>
-  <section class="panel">
-   <h2>Left team</h2>
-   <label for="leftKickerInput">Small text above name</label><input id="leftKickerInput" maxlength="40" placeholder="VISITORS">
-   <label for="leftNameInput">Team name</label><input id="leftNameInput" maxlength="35">
-   <div class="fieldrow">
-    <div><label for="leftColor">Accent color</label><input id="leftColor" type="color"></div>
-    <div><label for="leftFile">Logo image</label><input id="leftFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
-   </div>
-   <div class="logo-actions"><img class="logo-preview" id="leftPreview" alt="Left team logo preview"><button class="secondary" id="removeLeft" type="button" style="border:0;padding:10px;border-radius:7px;background:#4e6174;color:white">Remove logo</button></div>
-  </section>
-  <section class="panel">
-   <h2>Right team</h2>
-   <label for="rightKickerInput">Small text above name</label><input id="rightKickerInput" maxlength="40" placeholder="HOME">
-   <label for="rightNameInput">Team name</label><input id="rightNameInput" maxlength="35">
-   <div class="fieldrow">
-    <div><label for="rightColor">Accent color</label><input id="rightColor" type="color"></div>
-    <div><label for="rightFile">Logo image</label><input id="rightFile" type="file" accept="image/png,image/jpeg,image/webp"></div>
-   </div>
-   <div class="logo-actions"><img class="logo-preview" id="rightPreview" alt="Right team logo preview"><button class="secondary" id="removeRight" type="button" style="border:0;padding:10px;border-radius:7px;background:#4e6174;color:white">Remove logo</button></div>
-  </section>
-  <section class="panel wide"><h2>Use your existing volleyball logos</h2><div class="actions"><button class="secondary" id="importEagles">Import saved Eagles logo</button><button class="secondary" id="importTeams">Copy both teams from scoreboard</button></div><p class="mini">If you uploaded the Eagles image on the volleyball scoreboard in THIS browser, the import button will locate it. Otherwise, use the Logo image field above. Once saved, your matchup settings remain stored through page updates and are sent to the connected overlay.</p></section>
-  <section class="panel wide"><h2>Matchup text &amp; size</h2><label for="footerInput">Bottom caption</label><input id="footerInput" maxlength="70" placeholder="VOLLEYBALL • GAME DAY"><div class="fieldrow"><div><label for="widthInput">Banner width (%)</label><input id="widthInput" type="number" min="55" max="98" step="1"></div><div><label for="heightInput">Banner height (%)</label><input id="heightInput" type="number" min="17" max="44" step="1"></div><div><label for="topInput">Vertical position (%)</label><input id="topInput" type="number" min="22" max="78" step="1"></div><div><label for="opacityInput">Panel darkness (0.65–1)</label><input id="opacityInput" type="number" min=".65" max="1" step=".05"></div></div><p id="msg" role="status"></p></section>
- </div>
- <div class="notice"><strong>Testing:</strong> Open the controller and overlay in <strong>two tabs in the same Chrome browser on one laptop</strong>. That is how your existing volleyball scoreboard shares changes. Your two school laptops do not share browser storage, so separate-laptop controls require a realtime service (not part of this reliable local test). The separate-computer demo can be enabled later with <code>?remote=1</code> on both links, but a production service is needed before a game.</div>
-</div>
-<script src="./logo.js?v=9"></script>
-<script src="./matchup-eagle.js?v=9"></script>
-<script src="./matchup-sync.js?v=10"></script>
+<div id="stage"><section id="banner">
+<div id="main"><div class="side left"><div class="mark"><img id="leftLogo" alt="Left team logo" hidden><span id="leftLetter">E</span></div><div class="word"><div class="small" id="leftSmall">VISITORS</div><div class="big" id="leftName">EAGLES</div></div></div>
+<div id="versus">VS</div>
+<div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
+<div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
+<div id="editor">
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=12" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
+<p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
+<div class="grid">
+<div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
+<div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
+<div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
+</div></div>
+<script src="./logo.js?v=12"></script><script src="./matchup-eagle.js?v=12"></script>
 <script>
-'use strict';
 (function(){
- const CONFIG='htv-vb-matchup-v1', DISPLAY='htv-vb-matchup-display-v1';
- let broadcast=null;try{broadcast=new BroadcastChannel('htv-volleyball-matchup');}catch(e){}
- function postToPreview(){/* Preview is rendered directly from the same DOM and state; no iframe messaging needed. */}
- const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
- const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview'),isTest=qs.has('test');
- const el=id=>document.getElementById(id);
- const inMemory={};
- function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch{return inMemory[k]||{}}}
- function persist(k,v){inMemory[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){/* webview storage disabled; realtime continues */}}
- function state(){return Object.assign({},defaults,get(CONFIG))}
- function showState(){return Object.assign({visible:false,tick:0},get(DISPLAY))}
- function msg(t){if(el('msg'))el('msg').textContent=t}
- function save(v){try{persist(CONFIG,Object.assign(state(),v));paint();postToPreview();broadcast?.postMessage({type:'config',value:state()});window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
- function escapeNo(s){return String(s||'').trim().toUpperCase()}
- function resolveLogo(side,s){
-  const name=escapeNo(s[side+'Name']);
-  let custom=s[side+'Logo']||'';
-  // Older builds accidentally saved the Eagles default on the wrong team.
-  if(custom===window.MATCHUP_EAGLE_LOGO&&!/EAGLES?/i.test(name))custom='';
-  if(custom)return custom;
-  if(/EAGLES?/i.test(name))return window.MATCHUP_EAGLE_LOGO||'';
-  if(/MUSTANGS?/i.test(name))return typeof DEFAULT_LOGO!=='undefined'?DEFAULT_LOGO:'';
-  return '';
+'use strict';
+const CONFIG='htv-vb-matchup-v1',DISPLAY='htv-vb-matchup-display-v1';
+const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',footer:'VOLLEYBALL | GAME DAY',width:85,height:27,top:50};
+const params=new URLSearchParams(location.search),controller=params.has('control'),testing=params.has('test');
+const $=id=>document.getElementById(id);
+let volatile={},lastTick=null,lastVisible=false,animationTimer=0;
+function read(key){let obj={};try{obj=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){obj=volatile[key]||{}}return obj}
+function store(key,value){volatile[key]=value;try{localStorage.setItem(key,JSON.stringify(value))}catch(e){}}
+function config(){const c=read(CONFIG);return {...DEFAULT,...c,
+leftSmall:c.leftSmall!==undefined?c.leftSmall:(c.leftKicker||DEFAULT.leftSmall),
+rightSmall:c.rightSmall!==undefined?c.rightSmall:(c.rightKicker||DEFAULT.rightSmall)}}
+function display(){return {...{visible:false,tick:0},...read(DISPLAY)}}
+function safeText(v){return String(v==null?'':v).toUpperCase()}
+function logo(side,s){let custom=s[side+'Logo']||'',name=safeText(s[side+'Name']);if(name.indexOf('EAGLE')<0&&custom===window.MATCHUP_EAGLE_LOGO)custom='';
+ if(custom)return custom;
+ if(name.indexOf('EAGLE')>=0)return window.MATCHUP_EAGLE_LOGO||'';
+ if(name.indexOf('MUSTANG')>=0)return (typeof DEFAULT_LOGO!=='undefined'?DEFAULT_LOGO:'');
+ return '';
+}
+function render(){
+ const s=config(),b=$('banner');
+ b.style.width=Math.min(98,Math.max(55,Number(s.width)||85))+'%';
+ b.style.height=Math.min(48,Math.max(17,Number(s.height)||27))+'%';
+ b.style.top=Math.min(80,Math.max(20,Number(s.top)||50))+'%';
+ b.style.setProperty('--lc',s.leftColor);b.style.setProperty('--rc',s.rightColor);
+ for(const side of ['left','right']){
+  $(side+'Small').textContent=safeText(s[side+'Small']);
+  $(side+'Name').textContent=safeText(s[side+'Name']);
+  const img=$(side+'Logo'),letter=$(side+'Letter'),source=logo(side,s);
+  if(source){if(img.getAttribute('src')!==source)img.setAttribute('src',source);img.hidden=false;letter.hidden=true}
+  else{img.hidden=true;img.removeAttribute('src');letter.hidden=false;letter.textContent=(s[side+'Name']||'?').charAt(0).toUpperCase()}
  }
- function paint(){
-  const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
-  for(const side of ['left','right']){
-   el(side+'Name').textContent=escapeNo(s[side+'Name'])||'TEAM';
-   el(side+'Kicker').textContent=escapeNo(s[side+'Kicker']);
-   const logo=el(side+'Logo'),src=resolveLogo(side,s);
-   if(src){if(logo.getAttribute('src')!==src)logo.src=src;logo.hidden=false;el(side+'Initial').hidden=true}
-   else{logo.hidden=true;logo.removeAttribute('src');el(side+'Initial').hidden=false;el(side+'Initial').textContent=(escapeNo(s[side+'Name'])||'?').slice(0,1)}
-  }
-  el('footer').textContent=escapeNo(s.footer);
-  if(isControl){
-   ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity'].forEach(k=>{
-    const id=k+'Input',node=el(id);if(node&&document.activeElement!==node)node.value=s[k];
-   });
-   for(const side of ['left','right']){const p=el(side+'Preview'),src=resolveLogo(side,s);p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
+ $('footer').textContent=safeText(s.footer);
+ if(controller){
+  for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
+   const field=$(k+'Input');if(document.activeElement!==field)field.value=s[k];
   }
  }
- let timer=0,oldTick=null,oldVisible=null,onlineHeartbeat=0;
- function visibility(next,replay){
-  const m=el('match');clearTimeout(timer);m.classList.remove('shown','entering','hiding');
-  void m.offsetWidth;
-  if(next){m.style.visibility='visible';m.style.opacity='1';m.classList.add('entering');timer=setTimeout(()=>{m.classList.remove('entering');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1'},900)}
-  else if(oldVisible===null){m.style.visibility='hidden';m.style.opacity='0';}
-  else{m.style.visibility='visible';m.style.opacity='1';m.classList.add('hiding');timer=setTimeout(()=>{m.classList.remove('hiding');m.style.visibility='hidden';m.style.opacity='0'},710)}
+}
+function updateVisibility(){
+ const d=display(),b=$('banner');
+ if(controller)$('status').textContent='Overlay is '+(d.visible?'ON':'OFF')+' — click SHOW to display it';
+ if(testing){b.className='on';b.style.visibility='visible';b.style.opacity='1';return}
+ if(lastTick===d.tick&&lastVisible===d.visible)return;
+ clearTimeout(animationTimer);
+ b.className='';
+ void b.offsetWidth;
+ if(d.visible){
+  b.style.visibility='visible';b.style.opacity='1';
+  b.className='opening';
+  animationTimer=setTimeout(()=>{b.className='on';b.style.visibility='visible';b.style.opacity='1'},760);
+ }else if(lastTick===null){
+  b.style.visibility='hidden';b.style.opacity='0';
+ }else{
+  b.style.visibility='visible';b.style.opacity='1';b.className='closing';
+  animationTimer=setTimeout(()=>{b.className='';b.style.visibility='hidden';b.style.opacity='0'},650);
  }
- function sync(){
-  const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
-  if(changed){
-   if(isPreview||isTest){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
-   else visibility(!!d.visible,!!d.replay);
-   if(!isPreview&&!isTest&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
-   oldTick=d.tick;oldVisible=!!d.visible;
-  }
-  if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
+ lastTick=d.tick;lastVisible=!!d.visible;
+}
+function update(k,v){const s=config();s[k]=v;store(CONFIG,s);render()}
+function command(on){store(DISPLAY,{visible:on,tick:Date.now()+Math.random()});updateVisibility()}
+function importLogo(side,input){
+ const file=input.files&&input.files[0];if(!file)return;
+ const u=URL.createObjectURL(file),img=new Image();
+ img.onload=()=>{try{const scale=Math.min(1,350/img.width,350/img.height),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));c.getContext('2d').drawImage(img,0,0,c.width,c.height);update(side+'Logo',c.toDataURL('image/webp',.76))}
+ catch(e){alert('Could not save the logo: '+e.message)}finally{URL.revokeObjectURL(u);input.value=''}};
+ img.onerror=()=>{URL.revokeObjectURL(u);alert('Please select a PNG, JPG, or WebP logo.')};img.src=u;
+}
+if(controller){
+ document.body.classList.add('controller');
+ $('livePreview').appendChild($('stage'));
+ for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
+  $(k+'Input').addEventListener('input',e=>update(k,['width','height','top'].includes(k)?Number(e.target.value):e.target.value));
  }
- function trigger(visible,replay){
-  try{persist(DISPLAY,{visible:visible,tick:Date.now()+Math.random(),replay:!!replay});sync();postToPreview();broadcast?.postMessage({type:'display',value:showState()});window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
+ for(const side of ['left','right']){
+  $(side+'File').addEventListener('change',e=>importLogo(side,e.target));
+  $(side+'Remove').addEventListener('click',()=>update(side+'Logo',''));
  }
- async function upload(side,input){
-  const f=input.files&&input.files[0];if(!f)return;
-  if(!['image/png','image/jpeg','image/webp'].includes(f.type)){msg('Please choose a PNG, JPG, or WebP logo.');input.value='';return}
-  const url=URL.createObjectURL(f);
-  try{
-   const img=new Image();img.src=url;await img.decode();
-   const scale=Math.min(1,300/img.naturalWidth,300/img.naturalHeight),c=document.createElement('canvas');
-   c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));
-   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-   save({[side+'Logo']:c.toDataURL('image/webp',.72)});
-  }catch(e){msg('Logo could not be loaded. Choose another PNG, JPG, or WebP.')}finally{URL.revokeObjectURL(url);input.value=''}
- }
- function source(){
-  const result=[];
-  const ref=get('htv-volleyball-reference-brand');
-  if(ref.homeName||ref.awayName)result.push([{name:ref.homeName,logo:ref.homeLogo,color:ref.homeColor},{name:ref.awayName,logo:ref.awayLogo,color:ref.awayColor}]);
-  const college=get('htv-volleyball-college-v2-brand');
-  if(college.homeName||college.awayName)result.push([{name:college.homeName,logo:college.home&&college.home.logo,color:college.home&&college.home.background},{name:college.awayName,logo:college.away&&college.away.logo,color:college.away&&college.away.background}]);
-  const classic=get('htv-volleyball-score');
-  if(classic.homeName||classic.awayName)result.push([{name:classic.homeName,logo:classic.home&&classic.home.logo,color:classic.home&&classic.home.background},{name:classic.awayName,logo:classic.away&&classic.away.logo,color:classic.away&&classic.away.background}]);
-  return result;
- }
- function findEagle(){for(const group of source())for(const item of group)if(/eagles?/i.test(item.name||'')&&item.logo)return item;return null}
- async function smallerLogo(src){
-  if(!src||src.length<24000)return src;
-  try{
-   const img=new Image();img.src=src;await img.decode();
-   const scale=Math.min(1,300/img.naturalWidth,300/img.naturalHeight),c=document.createElement('canvas');
-   c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));
-   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-   return c.toDataURL('image/webp',.65)
-  }catch(e){msg('Unable to compress imported image. Upload a smaller logo here.');return src}
- }
- async function importEagle(){const a=findEagle();if(!a){msg('No saved Eagles logo found in this browser. Upload the image above instead.');return}
-  save({leftName:a.name||'EAGLES',leftLogo:await smallerLogo(a.logo),...(a.color?{leftColor:a.color}:{})});msg('Eagles logo imported from the volleyball scoreboard.')}
- async function importBoth(){for(const group of source())if(group[0].name&&group[1].name){const v={};
-  for(const [i,side] of ['left','right'].entries()){const a=group[i];v[side+'Name']=a.name;if(a.logo)v[side+'Logo']=await smallerLogo(a.logo);if(/^#[0-9a-fA-F]{6}$/.test(a.color||''))v[side+'Color']=a.color}
-  save(v);msg('Teams imported from your existing volleyball scoreboard.');return}msg('No saved scoreboard teams found in this browser.')}
- if(isPreview||isTest)document.body.classList.add('preview');
- if(isControl){
-  document.body.classList.add('controller');
-  // Move the actual matchup stage into the controller preview: identical rendering, no iframe races.
-  el('previewMount').appendChild(el('stage'));
-  for(const k of ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity']){
-   const node=el(k+'Input');node.addEventListener(['width','height','top','opacity'].includes(k)?'change':'input',()=>{
-    let v=node.value;
-    if(['width','height','top','opacity'].includes(k)){
-     const ranges={width:[55,98],height:[17,44],top:[22,78],opacity:[.65,1]},limits=ranges[k];v=Math.max(limits[0],Math.min(limits[1],Number(v)||defaults[k]));
-    }
-    save({[k]:v});
-   });
-  }
-  for(const side of ['left','right']){
-   el(side+'File').addEventListener('change',e=>upload(side,e.target));
-   el('remove'+side[0].toUpperCase()+side.slice(1)).addEventListener('click',()=>save({[side+'Logo']:''}));
-  }
-  el('show').addEventListener('click',()=>trigger(true,false));
-  el('hide').addEventListener('click',()=>trigger(false,false));
-  el('replay').addEventListener('click',()=>trigger(true,true));
-  el('importEagles').addEventListener('click',importEagle);
-  el('importTeams').addEventListener('click',importBoth);
-  // Never overwrite the user's chosen left/right teams at startup.
- }
- window.addEventListener('storage',e=>{if(e.key===CONFIG)paint();if(e.key===DISPLAY)sync()});
- window.addEventListener('message',event=>{if(event.origin!==location.origin||!event.data?.htvMatchup||isControl)return;fromRemoteConfig(event.data.config);fromRemoteDisplay(event.data.display);});
- if(broadcast)broadcast.onmessage=e=>{
-  if(!e.data)return;
-  if(e.data.type==='config')fromRemoteConfig(e.data.value);
-  if(e.data.type==='display')fromRemoteDisplay(e.data.value);
-  if(e.data.type==='ping'&&!isControl&&!isPreview){broadcast.postMessage({type:'ready',time:Date.now()})}
-  if(e.data.type==='ready'&&isControl){onlineHeartbeat=Date.now();el('overlayStatus').textContent='Overlay tab connected on this laptop';el('overlayStatus').style.color='#087a55'}
- };
- function fromRemoteConfig(data){if(!data||typeof data!=='object')return;
-  const clean={};for(const k of Object.keys(defaults)){if(Object.prototype.hasOwnProperty.call(data,k)){const v=data[k];if(typeof v==='string'||typeof v==='number')clean[k]=v}}
-  try{persist(CONFIG,{...state(),...clean});paint()}catch(e){}
- }
- function fromRemoteDisplay(data){if(!data||typeof data!=='object')return;
-  const d={visible:!!data.visible,tick:Number(data.tick)||Date.now(),replay:!!data.replay};
-  try{persist(DISPLAY,d);sync()}catch(e){}
- }
- const wire=window.MatchupWire;
- // Match the proven localStorage behavior of the existing volleyball scoreboard by default.
- // The optional public MQTT prototype is enabled only with ?remote=1 on BOTH pages.
- if(wire&&qs.has('remote'))wire.start({role:isControl?'controller':(isPreview?'preview':'overlay'),snapshotConfig:state,snapshotDisplay:showState,
-  config:isControl?()=>{}:fromRemoteConfig,display:isControl?()=>{}:fromRemoteDisplay,
-  status:status=>{if(isControl){el('remoteStatus').textContent='Separate-computer sync: '+status+' (optional)'}},
-  presence:(v,t)=>{if(v?.active&&Number.isFinite(t)&&Date.now()-t<42000){onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}}
- });
- if(isControl&&!qs.has('remote'))el('remoteStatus').textContent='Separate-computer sync is off for local testing';
- paint();sync();
- setInterval(()=>{if(!isControl)paint();sync()},250);
- /* No preview iframe: the controller changes the same stage elements immediately. */
- if(isControl){broadcast?.postMessage({type:'ping'});setInterval(()=>broadcast?.postMessage({type:'ping'}),1500);setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Open the overlay in another tab on this laptop';el('overlayStatus').style.color='#64748b'}},5000);}
+ $('show').addEventListener('click',()=>command(true));
+ $('hide').addEventListener('click',()=>command(false));
+ $('replay').addEventListener('click',()=>command(true));
+}
+window.addEventListener('storage',e=>{if(e.key===CONFIG)render();if(e.key===DISPLAY)updateVisibility()});
+render();updateVisibility();
+setInterval(()=>{render();updateVisibility()},300);
 })();
-</script>
-</body>
-</html>
+</script></body></html>
