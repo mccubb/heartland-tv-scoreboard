@@ -140,11 +140,13 @@ input[type=range]{padding:0}
  const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:window.MATCHUP_EAGLE_LOGO||'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
  const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview');
  const el=id=>document.getElementById(id);
- function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch{return {}}}
+ const inMemory={};
+ function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch{return inMemory[k]||{}}}
+ function persist(k,v){inMemory[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){/* webview storage disabled; realtime continues */}}
  function state(){return Object.assign({},defaults,get(CONFIG))}
  function showState(){return Object.assign({visible:false,tick:0},get(DISPLAY))}
  function msg(t){if(el('msg'))el('msg').textContent=t}
- function save(v){try{localStorage.setItem(CONFIG,JSON.stringify(Object.assign(state(),v)));paint();window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
+ function save(v){try{persist(CONFIG,Object.assign(state(),v));paint();window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
  function escapeNo(s){return String(s||'').trim().toUpperCase()}
  function paint(){
   const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
@@ -182,7 +184,7 @@ input[type=range]{padding:0}
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
  }
  function trigger(visible,replay){
-  try{localStorage.setItem(DISPLAY,JSON.stringify({visible:visible,tick:Date.now()+Math.random(),replay:!!replay}));sync();window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
+  try{persist(DISPLAY,{visible:visible,tick:Date.now()+Math.random(),replay:!!replay});sync();window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
  }
  async function upload(side,input){
   const f=input.files&&input.files[0];if(!f)return;
@@ -213,7 +215,7 @@ input[type=range]{padding:0}
  if(isControl){
   document.body.classList.add('controller');
   for(const k of ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity']){
-   const node=el(k+'Input');node.addEventListener('change',()=>{
+   const node=el(k+'Input');node.addEventListener(['width','height','top','opacity'].includes(k)?'change':'input',()=>{
     let v=node.value;
     if(['width','height','top','opacity'].includes(k)){
      const ranges={width:[55,98],height:[17,44],top:[22,78],opacity:[.65,1]},limits=ranges[k];v=Math.max(limits[0],Math.min(limits[1],Number(v)||defaults[k]));
@@ -230,19 +232,19 @@ input[type=range]{padding:0}
   el('replay').addEventListener('click',()=>trigger(true,true));
   el('importEagles').addEventListener('click',importEagle);
   el('importTeams').addEventListener('click',importBoth);
-  if(!state().leftLogo){const eagle=findEagle();if(eagle)save({leftName:eagle.name||'EAGLES',leftLogo:eagle.logo})}
+  if(!get(CONFIG).leftLogo){const eagle=findEagle();if(eagle)save({leftName:eagle.name||'EAGLES',leftLogo:eagle.logo})}
  }
  window.addEventListener('storage',e=>{if(e.key===CONFIG)paint();if(e.key===DISPLAY)sync()});
  function fromRemoteConfig(data){if(!data||typeof data!=='object')return;
   const clean={};for(const k of Object.keys(defaults)){if(Object.prototype.hasOwnProperty.call(data,k)){const v=data[k];if(typeof v==='string'||typeof v==='number')clean[k]=v}}
-  try{localStorage.setItem(CONFIG,JSON.stringify({...state(),...clean}));paint()}catch(e){}
+  try{persist(CONFIG,{...state(),...clean});paint()}catch(e){}
  }
  function fromRemoteDisplay(data){if(!data||typeof data!=='object')return;
   const d={visible:!!data.visible,tick:Number(data.tick)||Date.now(),replay:!!data.replay};
-  try{localStorage.setItem(DISPLAY,JSON.stringify(d));sync()}catch(e){}
+  try{persist(DISPLAY,d);sync()}catch(e){}
  }
  const wire=window.MatchupWire;
- if(wire)wire.start({role:isControl?'controller':'overlay',snapshotConfig:state,snapshotDisplay:showState,
+ if(wire)wire.start({role:isControl?'controller':(isPreview?'preview':'overlay'),snapshotConfig:state,snapshotDisplay:showState,
   config:fromRemoteConfig,display:fromRemoteDisplay,
   status:status=>{if(isControl){el('connectionStatus').textContent='Live sync: '+status;el('connectionStatus').style.color=status==='Connected'?'#087a55':'#bc6125'}},
   presence:(v,t)=>{if(v?.active)onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}
