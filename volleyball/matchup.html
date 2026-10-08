@@ -15,7 +15,7 @@ body{background:transparent;overflow:hidden;color:white}
 .side.left{border-left:6px solid var(--lc,#185a99);background:linear-gradient(90deg,rgba(31,49,69,.38),rgba(8,18,30,0) 72%)}
 .side.right{border-right:6px solid var(--rc,#185a99);justify-content:flex-end;background:linear-gradient(270deg,rgba(31,49,69,.38),rgba(8,18,30,0) 72%)}
 .mark{flex:0 0 22%;height:84%;display:flex;align-items:center;justify-content:center;min-width:0}
-.mark img{max-height:100%;max-width:100%;object-fit:contain}
+.mark img{max-height:100%;max-width:100%;object-fit:contain;transform-origin:center center;transition:transform .12s ease-out}
 .mark img[hidden]{display:none}
 .mark span{font-size:clamp(24px,5vw,80px);font-weight:900}
 .word{min-width:0;flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.right .word{align-items:flex-start}
@@ -39,7 +39,7 @@ header a{color:#fff}
 .wide{grid-column:1/-1}
 label{display:block;font-weight:700;font-size:13px;color:#495569;margin:10px 0 5px}
 input{padding:10px;border:1px solid #bfcedd;border-radius:6px;font-size:16px;width:100%}
-input[type=color]{padding:2px;height:42px}
+input[type=color]{padding:2px;height:42px}input[type=range]{padding:0;accent-color:#22639c;cursor:pointer}.scale-value{font-variant-numeric:tabular-nums;color:#123d68}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .buttons{display:flex;gap:9px;flex-wrap:wrap}
 button{background:#22547e;color:white;border:0;padding:13px 18px;border-radius:7px;font-weight:800;cursor:pointer}
@@ -56,20 +56,20 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
 <div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
 <div id="editor">
-<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=13" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=14" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
 <p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
 <div class="grid">
-<div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
-<div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
+<div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><label>Logo scale: <strong class="scale-value" id="leftScaleValue">0</strong> / 100<input type="range" id="leftScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
+<div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=13"></script><script src="./matchup-eagle.js?v=13"></script>
+<script src="./logo.js?v=14"></script><script src="./matchup-eagle.js?v=14"></script>
 <script>
 (function(){
 'use strict';
 const CONFIG='htv-vb-matchup-v1',DISPLAY='htv-vb-matchup-display-v1';
-const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
+const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',leftScale:0,rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',rightScale:0,footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
 const params=new URLSearchParams(location.search),controller=params.has('control'),testing=params.has('test');
 const $=id=>document.getElementById(id);
 let volatile={},lastTick=null,lastVisible=false,animationTimer=0;
@@ -114,8 +114,8 @@ function render(){
   $(side+'Small').textContent=safeText(s[side+'Small']);
   $(side+'Name').textContent=safeText(s[side+'Name']);
   const img=$(side+'Logo'),letter=$(side+'Letter'),source=logo(side,s);
-  if(source){if(img.getAttribute('src')!==source)img.setAttribute('src',source);img.hidden=false;letter.hidden=true}
-  else{img.hidden=true;img.removeAttribute('src');letter.hidden=false;letter.textContent=(s[side+'Name']||'?').charAt(0).toUpperCase()}
+  if(source){if(img.getAttribute('src')!==source)img.setAttribute('src',source);img.hidden=false;letter.hidden=true;img.style.transform='scale('+(1+Math.max(0,Math.min(100,Number(s[side+'Scale'])||0))/100)+')'}
+  else{img.hidden=true;img.removeAttribute('src');img.style.transform='scale(1)';letter.hidden=false;letter.textContent=(s[side+'Name']||'?').charAt(0).toUpperCase()}
  }
  $('footer').textContent=safeText(s.footer);
  fitText();
@@ -123,6 +123,7 @@ function render(){
   for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
    const field=$(k+'Input');if(document.activeElement!==field)field.value=s[k];
   }
+  for(const side of ['left','right']){const scale=Math.max(0,Math.min(100,Number(s[side+'Scale'])||0));$(side+'ScaleValue').textContent=scale;if(document.activeElement!==$(side+'ScaleInput'))$(side+'ScaleInput').value=scale}
  }
 }
 function updateVisibility(){
@@ -161,6 +162,7 @@ if(controller){
   $(k+'Input').addEventListener('input',e=>update(k,['width','height','top'].includes(k)?Number(e.target.value):e.target.value));
  }
  for(const side of ['left','right']){
+  $(side+'ScaleInput').addEventListener('input',e=>update(side+'Scale',Math.max(0,Math.min(100,Number(e.target.value)||0))));
   $(side+'File').addEventListener('change',e=>importLogo(side,e.target));
   $(side+'Remove').addEventListener('click',()=>update(side+'Logo',''));
  }
