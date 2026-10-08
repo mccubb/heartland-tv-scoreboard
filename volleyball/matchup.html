@@ -105,7 +105,7 @@ input[type=range]{padding:0}
 <div id="controlView">
  <div class="head"><h1>HEARTLAND TV — MATCHUP CONTROL <span id="status" class="status">HIDDEN</span></h1><p>TV-style matchup screen for volleyball. <a href="./matchup.html" target="_blank">Open transparent overlay ↗</a> · <a href="./index.html" target="_blank">Volleyball scoreboard ↗</a></p></div>
  <div class="grid">
-  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1"></iframe></section>
+  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1"></iframe></section>
   <section class="panel">
    <h2>Left team</h2>
    <label for="leftKickerInput">Small text above name</label><input id="leftKickerInput" maxlength="40" placeholder="VISITORS">
@@ -126,30 +126,32 @@ input[type=range]{padding:0}
    </div>
    <div class="logo-actions"><img class="logo-preview" id="rightPreview" alt="Right team logo preview"><button class="secondary" id="removeRight" type="button" style="border:0;padding:10px;border-radius:7px;background:#4e6174;color:white">Remove logo</button></div>
   </section>
-  <section class="panel wide"><h2>Use your existing volleyball logos</h2><div class="actions"><button class="secondary" id="importEagles">Import saved Eagles logo</button><button class="secondary" id="importTeams">Copy both teams from scoreboard</button></div><p class="mini">If you uploaded the Eagles image on the volleyball scoreboard in THIS browser, the import button will locate it. Otherwise, use the Logo image field above. Once saved, your matchup settings remain stored through page updates.</p></section>
+  <section class="panel wide"><h2>Use your existing volleyball logos</h2><div class="actions"><button class="secondary" id="importEagles">Import saved Eagles logo</button><button class="secondary" id="importTeams">Copy both teams from scoreboard</button></div><p class="mini">If you uploaded the Eagles image on the volleyball scoreboard in THIS browser, the import button will locate it. Otherwise, use the Logo image field above. Once saved, your matchup settings remain stored through page updates and are sent to the connected overlay.</p></section>
   <section class="panel wide"><h2>Matchup text &amp; size</h2><label for="footerInput">Bottom caption</label><input id="footerInput" maxlength="70" placeholder="VOLLEYBALL • GAME DAY"><div class="fieldrow"><div><label for="widthInput">Banner width (%)</label><input id="widthInput" type="number" min="55" max="98" step="1"></div><div><label for="heightInput">Banner height (%)</label><input id="heightInput" type="number" min="17" max="44" step="1"></div><div><label for="topInput">Vertical position (%)</label><input id="topInput" type="number" min="22" max="78" step="1"></div><div><label for="opacityInput">Panel darkness (0.65–1)</label><input id="opacityInput" type="number" min=".65" max="1" step=".05"></div></div><p id="msg" role="status"></p></section>
  </div>
- <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. These buttons sync with overlay tabs/windows in the <strong>same browser profile on the same device</strong>. If YoloBox opens the link on a different device, the live buttons and browser-saved logos cannot sync without a small realtime service. You can still add this URL as a transparent overlay in YoloBox; automatic remote show/hide needs that extra connection.</div>
+ <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. This version uses a <strong>public demo live messaging service</strong> to send team settings and SHOW/HIDE commands to your YoloBox on another device. Check the LIVE / OVERLAY indicators above before a game. Demo servers are not guaranteed for productions; switch to a private realtime service before relying on it for critical broadcasts. Do not enter private data.</div>
 </div>
+<script src="./matchup-eagle.js?v=4"></script>
+<script src="./matchup-sync.js?v=4"></script>
 <script>
 'use strict';
 (function(){
  const CONFIG='htv-vb-matchup-v1', DISPLAY='htv-vb-matchup-display-v1';
- const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
+ const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:window.MATCHUP_EAGLE_LOGO||'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
  const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview');
  const el=id=>document.getElementById(id);
  function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch{return {}}}
  function state(){return Object.assign({},defaults,get(CONFIG))}
  function showState(){return Object.assign({visible:false,tick:0},get(DISPLAY))}
  function msg(t){if(el('msg'))el('msg').textContent=t}
- function save(v){try{localStorage.setItem(CONFIG,JSON.stringify(Object.assign(state(),v)));paint();msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
+ function save(v){try{localStorage.setItem(CONFIG,JSON.stringify(Object.assign(state(),v)));paint();window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
  function escapeNo(s){return String(s||'').trim().toUpperCase()}
  function paint(){
   const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
   for(const side of ['left','right']){
    el(side+'Name').textContent=escapeNo(s[side+'Name'])||'TEAM';
    el(side+'Kicker').textContent=escapeNo(s[side+'Kicker']);
-   const logo=el(side+'Logo'),src=s[side+'Logo'];
+   const logo=el(side+'Logo'),src=s[side+'Logo']||(side==='left'&&/EAGLES?/i.test(s.leftName)?window.MATCHUP_EAGLE_LOGO:'');
    if(src){if(logo.getAttribute('src')!==src)logo.src=src;logo.hidden=false;el(side+'Initial').hidden=true}
    else{logo.hidden=true;logo.removeAttribute('src');el(side+'Initial').hidden=false;el(side+'Initial').textContent=(escapeNo(s[side+'Name'])||'?').slice(0,1)}
   }
@@ -158,10 +160,10 @@ input[type=range]{padding:0}
    ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity'].forEach(k=>{
     const id=k+'Input',node=el(id);if(node&&document.activeElement!==node)node.value=s[k];
    });
-   for(const side of ['left','right']){const p=el(side+'Preview');p.hidden=!s[side+'Logo'];if(s[side+'Logo']&&p.getAttribute('src')!==s[side+'Logo'])p.src=s[side+'Logo'];if(!s[side+'Logo'])p.removeAttribute('src')}
+   for(const side of ['left','right']){const p=el(side+'Preview'),src=s[side+'Logo']||(side==='left'&&/EAGLES?/i.test(s.leftName)?window.MATCHUP_EAGLE_LOGO:'');p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
   }
  }
- let timer=0,oldTick=null,oldVisible=null;
+ let timer=0,oldTick=null,oldVisible=null,onlineHeartbeat=0;
  function visibility(next,replay){
   const m=el('match');clearTimeout(timer);m.classList.remove('shown','entering','hiding');
   void m.offsetWidth;
@@ -180,7 +182,7 @@ input[type=range]{padding:0}
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
  }
  function trigger(visible,replay){
-  try{localStorage.setItem(DISPLAY,JSON.stringify({visible:visible,tick:Date.now()+Math.random(),replay:!!replay}));sync()}catch(e){msg('Could not update show/hide state.')}
+  try{localStorage.setItem(DISPLAY,JSON.stringify({visible:visible,tick:Date.now()+Math.random(),replay:!!replay}));sync();window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
  }
  async function upload(side,input){
   const f=input.files&&input.files[0];if(!f)return;
@@ -188,10 +190,10 @@ input[type=range]{padding:0}
   const url=URL.createObjectURL(f);
   try{
    const img=new Image();img.src=url;await img.decode();
-   const scale=Math.min(1,520/img.naturalWidth,520/img.naturalHeight),c=document.createElement('canvas');
+   const scale=Math.min(1,300/img.naturalWidth,300/img.naturalHeight),c=document.createElement('canvas');
    c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));
    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-   save({[side+'Logo']:c.toDataURL('image/webp',.90)});
+   save({[side+'Logo']:c.toDataURL('image/webp',.72)});
   }catch(e){msg('Logo could not be loaded. Choose another PNG, JPG, or WebP.')}finally{URL.revokeObjectURL(url);input.value=''}
  }
  function source(){
@@ -231,8 +233,23 @@ input[type=range]{padding:0}
   if(!state().leftLogo){const eagle=findEagle();if(eagle)save({leftName:eagle.name||'EAGLES',leftLogo:eagle.logo})}
  }
  window.addEventListener('storage',e=>{if(e.key===CONFIG)paint();if(e.key===DISPLAY)sync()});
+ function fromRemoteConfig(data){if(!data||typeof data!=='object')return;
+  const clean={};for(const k of Object.keys(defaults)){if(Object.prototype.hasOwnProperty.call(data,k)){const v=data[k];if(typeof v==='string'||typeof v==='number')clean[k]=v}}
+  try{localStorage.setItem(CONFIG,JSON.stringify({...state(),...clean}));paint()}catch(e){}
+ }
+ function fromRemoteDisplay(data){if(!data||typeof data!=='object')return;
+  const d={visible:!!data.visible,tick:Number(data.tick)||Date.now(),replay:!!data.replay};
+  try{localStorage.setItem(DISPLAY,JSON.stringify(d));sync()}catch(e){}
+ }
+ const wire=window.MatchupWire;
+ if(wire)wire.start({role:isControl?'controller':'overlay',snapshotConfig:state,snapshotDisplay:showState,
+  config:fromRemoteConfig,display:fromRemoteDisplay,
+  status:status=>{if(isControl){el('connectionStatus').textContent='Live sync: '+status;el('connectionStatus').style.color=status==='Connected'?'#087a55':'#bc6125'}},
+  presence:(v,t)=>{if(v?.active)onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}
+ });
  paint();sync();
  if(!isControl)setInterval(()=>{paint();sync()},550);
+ if(isControl)setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Overlay not detected yet';el('overlayStatus').style.color='#b42c36'}},5000);
 })();
 </script>
 </body>
