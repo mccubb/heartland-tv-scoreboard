@@ -156,7 +156,7 @@ input[type=range]{padding:0}
   for(const side of ['left','right']){
    el(side+'Name').textContent=escapeNo(s[side+'Name'])||'TEAM';
    el(side+'Kicker').textContent=escapeNo(s[side+'Kicker']);
-   const logo=el(side+'Logo'),src=s[side+'Logo']||(side==='left'&&/EAGLES?/i.test(s.leftName)?window.MATCHUP_EAGLE_LOGO:'');
+   const logo=el(side+'Logo'),src=s[side+'Logo']||(/EAGLES?/i.test(s[side+'Name'])?window.MATCHUP_EAGLE_LOGO:'');
    if(src){if(logo.getAttribute('src')!==src)logo.src=src;logo.hidden=false;el(side+'Initial').hidden=true}
    else{logo.hidden=true;logo.removeAttribute('src');el(side+'Initial').hidden=false;el(side+'Initial').textContent=(escapeNo(s[side+'Name'])||'?').slice(0,1)}
   }
@@ -165,7 +165,7 @@ input[type=range]{padding:0}
    ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity'].forEach(k=>{
     const id=k+'Input',node=el(id);if(node&&document.activeElement!==node)node.value=s[k];
    });
-   for(const side of ['left','right']){const p=el(side+'Preview'),src=s[side+'Logo']||(side==='left'&&/EAGLES?/i.test(s.leftName)?window.MATCHUP_EAGLE_LOGO:'');p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
+   for(const side of ['left','right']){const p=el(side+'Preview'),src=s[side+'Logo']||(/EAGLES?/i.test(s[side+'Name'])?window.MATCHUP_EAGLE_LOGO:'');p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
   }
  }
  let timer=0,oldTick=null,oldVisible=null,onlineHeartbeat=0;
@@ -179,9 +179,9 @@ input[type=range]{padding:0}
  function sync(){
   const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
   if(changed){
-   if(oldVisible===null&&isPreview&&!d.visible){el('match').classList.add('shown');}
+   if(isPreview){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
    else visibility(!!d.visible,!!d.replay);
-   if(oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
+   if(!isPreview&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
    oldTick=d.tick;oldVisible=!!d.visible;
   }
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
