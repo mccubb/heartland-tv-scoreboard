@@ -49,11 +49,11 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #56ab
 @keyframes logoFromRight{from{opacity:0;transform:translateX(28px) scale(.87)}to{opacity:1;transform:translateX(0) scale(1)}}
 @keyframes vsPop{0%{opacity:0;transform:scale(.45)}65%{opacity:1;transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}
 body.preview{background:radial-gradient(ellipse at 50% 0,#162943,#070e1b 70%);}
-body.preview #stage:before{content:"";position:absolute;inset:46% -15% -40%;background:linear-gradient(90deg,transparent 0 22%,rgba(255,255,255,.26) 22.2% 22.5%,transparent 22.8% 77%,rgba(255,255,255,.24) 77.2% 77.5%,transparent 77.8%),linear-gradient(0deg,#a57c50,#d3a778 40%,#bb8f60);transform:perspective(400px) rotateX(58deg);opacity:.72;border-top:2px solid #f8eadb}
-body.preview #stage:after{content:"";position:absolute;left:44%;right:44%;bottom:0;top:60%;border-left:2px solid rgba(255,255,255,.42);border-right:2px solid rgba(255,255,255,.42);transform:perspective(450px) rotateX(54deg);opacity:.6}
+body.preview #stage:before,body.controller #stage:before{content:"";position:absolute;inset:46% -15% -40%;background:linear-gradient(90deg,transparent 0 22%,rgba(255,255,255,.26) 22.2% 22.5%,transparent 22.8% 77%,rgba(255,255,255,.24) 77.2% 77.5%,transparent 77.8%),linear-gradient(0deg,#a57c50,#d3a778 40%,#bb8f60);transform:perspective(400px) rotateX(58deg);opacity:.72;border-top:2px solid #f8eadb}
+body.preview #stage:after,body.controller #stage:after{content:"";position:absolute;left:44%;right:44%;bottom:0;top:60%;border-left:2px solid rgba(255,255,255,.42);border-right:2px solid rgba(255,255,255,.42);transform:perspective(450px) rotateX(54deg);opacity:.6}
 body.controller{overflow:auto;height:auto;min-height:100%;background:#eaf0f6;color:#1c2734}
 #controlView{display:none}
-body.controller #stage{display:none}
+body.controller #stage{display:block;width:100%;height:auto;aspect-ratio:16/9;overflow:hidden;border-radius:10px;background:radial-gradient(ellipse at 50% 0,#162943,#070e1b 70%)}
 body.controller #controlView{display:block;max-width:1130px;margin:auto;padding:20px 16px 45px}
 .head{background:linear-gradient(100deg,#0a2947,#124d7b);color:white;padding:24px;border-radius:12px}
 .head h1{margin:0 0 7px;font-size:clamp(21px,3vw,30px)}
@@ -106,7 +106,7 @@ input[type=range]{padding:0}
 <div id="controlView">
  <div class="head"><h1>HEARTLAND TV — MATCHUP CONTROL <span id="status" class="status">HIDDEN</span></h1><p>TV-style matchup screen for volleyball. <a href="./matchup.html" target="_blank">Open transparent overlay ↗</a> · <a href="./index.html" target="_blank">Volleyball scoreboard ↗</a></p></div>
  <div class="grid">
-  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">The preview below updates instantly. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1&amp;v=7"></iframe></section>
+  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">The preview below is now the actual graphic, directly connected to the inputs (no separate embedded page). The preview stays visible while editing even if the broadcast overlay is hidden. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><div id="previewMount" aria-label="Live matchup preview" style="background:#081020;border-radius:10px;overflow:hidden;margin-top:12px"></div></section>
   <section class="panel">
    <h2>Left team</h2>
    <label for="leftKickerInput">Small text above name</label><input id="leftKickerInput" maxlength="40" placeholder="VISITORS">
@@ -130,7 +130,7 @@ input[type=range]{padding:0}
   <section class="panel wide"><h2>Use your existing volleyball logos</h2><div class="actions"><button class="secondary" id="importEagles">Import saved Eagles logo</button><button class="secondary" id="importTeams">Copy both teams from scoreboard</button></div><p class="mini">If you uploaded the Eagles image on the volleyball scoreboard in THIS browser, the import button will locate it. Otherwise, use the Logo image field above. Once saved, your matchup settings remain stored through page updates and are sent to the connected overlay.</p></section>
   <section class="panel wide"><h2>Matchup text &amp; size</h2><label for="footerInput">Bottom caption</label><input id="footerInput" maxlength="70" placeholder="VOLLEYBALL • GAME DAY"><div class="fieldrow"><div><label for="widthInput">Banner width (%)</label><input id="widthInput" type="number" min="55" max="98" step="1"></div><div><label for="heightInput">Banner height (%)</label><input id="heightInput" type="number" min="17" max="44" step="1"></div><div><label for="topInput">Vertical position (%)</label><input id="topInput" type="number" min="22" max="78" step="1"></div><div><label for="opacityInput">Panel darkness (0.65–1)</label><input id="opacityInput" type="number" min=".65" max="1" step=".05"></div></div><p id="msg" role="status"></p></section>
  </div>
- <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. This version uses a <strong>public demo live messaging service</strong> to send team settings and SHOW/HIDE commands to your YoloBox on another device. Check the LIVE / OVERLAY indicators above before a game. Demo servers are not guaranteed for productions; switch to a private realtime service before relying on it for critical broadcasts. Do not enter private data.</div>
+ <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. Pages opened in different tabs on the <strong>same browser</strong> sync immediately, just like your volleyball scoreboard. Separate computers use a <strong>public demo live messaging service</strong> to send team settings and SHOW/HIDE commands to your YoloBox on another device. Check the LIVE / OVERLAY indicators above before a game. Demo servers are not guaranteed for productions; switch to a private realtime service before relying on it for critical broadcasts. Do not enter private data.</div>
 </div>
 <script src="./matchup-eagle.js?v=7"></script>
 <script src="./matchup-sync.js?v=7"></script>
@@ -139,7 +139,7 @@ input[type=range]{padding:0}
 (function(){
  const CONFIG='htv-vb-matchup-v1', DISPLAY='htv-vb-matchup-display-v1';
  let broadcast=null;try{broadcast=new BroadcastChannel('htv-volleyball-matchup');}catch(e){}
- function postToPreview(){if(!isControl)return;const f=el('previewFrame');try{f.contentWindow?.postMessage({htvMatchup:true,config:state(),display:showState()},location.origin)}catch(e){}}
+ function postToPreview(){/* Preview is rendered directly from the same DOM and state; no iframe messaging needed. */}
  const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:window.MATCHUP_EAGLE_LOGO||'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
  const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview'),isTest=qs.has('test');
  const el=id=>document.getElementById(id);
@@ -179,9 +179,9 @@ input[type=range]{padding:0}
  function sync(){
   const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
   if(changed){
-   if(isPreview){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
+   if(isControl||isPreview){const m=el('match');m.classList.remove('entering','hiding');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1';}
    else visibility(!!d.visible,!!d.replay);
-   if(!isPreview&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
+   if(!isControl&&!isPreview&&oldVisible!==null&&oldVisible===false&&d.visible===false){el('match').classList.remove('shown');}
    oldTick=d.tick;oldVisible=!!d.visible;
   }
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
@@ -230,6 +230,8 @@ input[type=range]{padding:0}
  if(isPreview||isTest)document.body.classList.add('preview');
  if(isControl){
   document.body.classList.add('controller');
+  // Move the actual matchup stage into the controller preview: identical rendering, no iframe races.
+  el('previewMount').appendChild(el('stage'));
   for(const k of ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity']){
    const node=el(k+'Input');node.addEventListener(['width','height','top','opacity'].includes(k)?'change':'input',()=>{
     let v=node.value;
@@ -263,14 +265,14 @@ input[type=range]{padding:0}
  }
  const wire=window.MatchupWire;
  if(wire)wire.start({role:isControl?'controller':(isPreview?'preview':'overlay'),snapshotConfig:state,snapshotDisplay:showState,
-  config:fromRemoteConfig,display:fromRemoteDisplay,
+  config:isControl?()=>{}:fromRemoteConfig,display:isControl?()=>{}:fromRemoteDisplay,
   status:status=>{if(isControl){el('connectionStatus').textContent='Live sync: '+status;el('connectionStatus').style.color=status==='Connected'?'#087a55':'#bc6125'}},
   presence:(v,t)=>{if(v?.active&&Number.isFinite(t)&&Date.now()-t<42000){onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}}
  });
  paint();sync();
  if(isTest){const d=showState();if(!d.visible){oldVisible=false;const m=el('match');m.style.visibility='';m.style.opacity='';m.classList.add('shown');}}
  if(!isControl)setInterval(()=>{paint();sync()},550);
- if(isControl){el('previewFrame').addEventListener('load',()=>{postToPreview();setTimeout(postToPreview,500)});setInterval(postToPreview,1200)}
+ /* No preview iframe: the controller changes the same stage elements immediately. */
  if(isControl)setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Overlay not detected yet';el('overlayStatus').style.color='#b42c36'}},5000);
 })();
 </script>
