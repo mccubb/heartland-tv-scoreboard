@@ -106,7 +106,7 @@ input[type=range]{padding:0}
 <div id="controlView">
  <div class="head"><h1>HEARTLAND TV — MATCHUP CONTROL <span id="status" class="status">HIDDEN</span></h1><p>TV-style matchup screen for volleyball. <a href="./matchup.html" target="_blank">Open transparent overlay ↗</a> · <a href="./index.html" target="_blank">Volleyball scoreboard ↗</a></p></div>
  <div class="grid">
-  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1"></iframe></section>
+  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">The preview below updates instantly. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1"></iframe></section>
   <section class="panel">
    <h2>Left team</h2>
    <label for="leftKickerInput">Small text above name</label><input id="leftKickerInput" maxlength="40" placeholder="VISITORS">
@@ -138,8 +138,10 @@ input[type=range]{padding:0}
 'use strict';
 (function(){
  const CONFIG='htv-vb-matchup-v1', DISPLAY='htv-vb-matchup-display-v1';
+ let broadcast=null;try{broadcast=new BroadcastChannel('htv-volleyball-matchup');}catch(e){}
+ function postToPreview(){if(!isControl)return;const f=el('previewFrame');try{f.contentWindow?.postMessage({htvMatchup:true,config:state(),display:showState()},location.origin)}catch(e){}}
  const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:window.MATCHUP_EAGLE_LOGO||'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
- const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview');
+ const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview'),isTest=qs.has('test');
  const el=id=>document.getElementById(id);
  const inMemory={};
  function get(k){try{return JSON.parse(localStorage.getItem(k)||'{}')||{}}catch{return inMemory[k]||{}}}
@@ -147,7 +149,7 @@ input[type=range]{padding:0}
  function state(){return Object.assign({},defaults,get(CONFIG))}
  function showState(){return Object.assign({visible:false,tick:0},get(DISPLAY))}
  function msg(t){if(el('msg'))el('msg').textContent=t}
- function save(v){try{persist(CONFIG,Object.assign(state(),v));paint();window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
+ function save(v){try{persist(CONFIG,Object.assign(state(),v));paint();postToPreview();broadcast?.postMessage({type:'config',value:state()});window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
  function escapeNo(s){return String(s||'').trim().toUpperCase()}
  function paint(){
   const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
@@ -185,7 +187,7 @@ input[type=range]{padding:0}
   if(isControl){const status=el('status');status.textContent=d.visible?'ON AIR':'HIDDEN';status.classList.toggle('on',!!d.visible)}
  }
  function trigger(visible,replay){
-  try{persist(DISPLAY,{visible:visible,tick:Date.now()+Math.random(),replay:!!replay});sync();window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
+  try{persist(DISPLAY,{visible:visible,tick:Date.now()+Math.random(),replay:!!replay});sync();postToPreview();broadcast?.postMessage({type:'display',value:showState()});window.MatchupWire?.publish('display',showState())}catch(e){msg('Could not update show/hide state.')}
  }
  async function upload(side,input){
   const f=input.files&&input.files[0];if(!f)return;
@@ -225,7 +227,7 @@ input[type=range]{padding:0}
  async function importBoth(){for(const group of source())if(group[0].name&&group[1].name){const v={};
   for(const [i,side] of ['left','right'].entries()){const a=group[i];v[side+'Name']=a.name;if(a.logo)v[side+'Logo']=await smallerLogo(a.logo);if(/^#[0-9a-fA-F]{6}$/.test(a.color||''))v[side+'Color']=a.color}
   save(v);msg('Teams imported from your existing volleyball scoreboard.');return}msg('No saved scoreboard teams found in this browser.')}
- if(isPreview)document.body.classList.add('preview');
+ if(isPreview||isTest)document.body.classList.add('preview');
  if(isControl){
   document.body.classList.add('controller');
   for(const k of ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity']){
@@ -249,6 +251,8 @@ input[type=range]{padding:0}
   if(!get(CONFIG).leftLogo){const eagle=findEagle();if(eagle)save({leftName:eagle.name||'EAGLES',leftLogo:eagle.logo})}
  }
  window.addEventListener('storage',e=>{if(e.key===CONFIG)paint();if(e.key===DISPLAY)sync()});
+ window.addEventListener('message',event=>{if(event.origin!==location.origin||!event.data?.htvMatchup||isControl)return;fromRemoteConfig(event.data.config);fromRemoteDisplay(event.data.display);});
+ if(broadcast)broadcast.onmessage=e=>{if(!e.data)return;if(e.data.type==='config')fromRemoteConfig(e.data.value);if(e.data.type==='display')fromRemoteDisplay(e.data.value);if(isControl&&e.data.type==='ready')postToPreview()};
  function fromRemoteConfig(data){if(!data||typeof data!=='object')return;
   const clean={};for(const k of Object.keys(defaults)){if(Object.prototype.hasOwnProperty.call(data,k)){const v=data[k];if(typeof v==='string'||typeof v==='number')clean[k]=v}}
   try{persist(CONFIG,{...state(),...clean});paint()}catch(e){}
@@ -264,7 +268,9 @@ input[type=range]{padding:0}
   presence:(v,t)=>{if(v?.active&&Number.isFinite(t)&&Date.now()-t<42000){onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}}
  });
  paint();sync();
+ if(isTest){const d=showState();if(!d.visible){oldVisible=false;const m=el('match');m.style.visibility='';m.style.opacity='';m.classList.add('shown');}}
  if(!isControl)setInterval(()=>{paint();sync()},550);
+ if(isControl){el('previewFrame').addEventListener('load',()=>{postToPreview();setTimeout(postToPreview,500)});setInterval(postToPreview,1200)}
  if(isControl)setInterval(()=>{if(Date.now()-onlineHeartbeat>52000){el('overlayStatus').textContent='Overlay not detected yet';el('overlayStatus').style.color='#b42c36'}},5000);
 })();
 </script>
