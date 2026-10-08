@@ -4,25 +4,25 @@
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif}
 body{background:transparent;overflow:hidden;color:white}
 #stage{position:relative;width:100vw;height:100vh;overflow:hidden}
-#banner{position:absolute;left:50%;top:50%;width:85%;height:27%;transform:translate(-50%,-50%);display:flex;flex-direction:column;overflow:hidden;visibility:hidden;opacity:0;filter:drop-shadow(0 9px 15px rgba(0,0,0,.55));background:rgba(8,16,27,.94);border:1px solid #637284;will-change:clip-path,opacity}
+#banner{position:absolute;left:50%;top:50%;width:90%;height:27%;transform:translate(-50%,-50%);display:flex;flex-direction:column;overflow:hidden;visibility:hidden;opacity:0;filter:drop-shadow(0 9px 15px rgba(0,0,0,.55));background:linear-gradient(180deg,rgba(10,19,29,.95),rgba(7,15,25,.96));border:1px solid rgba(207,221,239,.44);will-change:clip-path,opacity}
 #banner.on{visibility:visible;opacity:1;clip-path:inset(0)}
 #banner.opening{visibility:visible;animation:unfold .72s cubic-bezier(.2,.75,.23,1) both}
 #banner.closing{visibility:visible;animation:fold .60s ease-in both}
 @keyframes unfold{0%{opacity:0;clip-path:inset(0 50%);filter:blur(4px)}30%{opacity:1}100%{opacity:1;clip-path:inset(0)}}
 @keyframes fold{0%{opacity:1;clip-path:inset(0)}75%{opacity:.8}100%{opacity:0;clip-path:inset(0 50%)}}
 #main{height:83%;width:100%;display:flex;align-items:stretch;min-height:0}
-.side{flex:1;min-width:0;display:flex;align-items:center;gap:2vw;padding:2%;position:relative}
-.side.left{border-left:6px solid var(--lc,#185a99);background:linear-gradient(90deg,color-mix(in srgb,var(--lc,#185a99) 40%,#0a121b),#0a121b)}
-.side.right{border-right:6px solid var(--rc,#185a99);justify-content:flex-end;background:linear-gradient(270deg,color-mix(in srgb,var(--rc,#185a99) 40%,#0a121b),#0a121b)}
-.mark{flex:0 0 28%;height:86%;display:flex;align-items:center;justify-content:center;min-width:0}
+.side{flex:1;min-width:0;display:flex;align-items:center;gap:1.25%;padding:1.7%;position:relative;color:#f7f8fa}
+.side.left{border-left:6px solid var(--lc,#185a99);background:linear-gradient(90deg,rgba(31,49,69,.38),rgba(8,18,30,0) 72%)}
+.side.right{border-right:6px solid var(--rc,#185a99);justify-content:flex-end;background:linear-gradient(270deg,rgba(31,49,69,.38),rgba(8,18,30,0) 72%)}
+.mark{flex:0 0 22%;height:84%;display:flex;align-items:center;justify-content:center;min-width:0}
 .mark img{max-height:100%;max-width:100%;object-fit:contain}
 .mark img[hidden]{display:none}
 .mark span{font-size:clamp(24px,5vw,80px);font-weight:900}
-.word{min-width:0;flex:1}
-.small{font-size:clamp(9px,1.05vw,18px);letter-spacing:.2em;color:#c5cbd5;font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.big{font-size:clamp(16px,2.6vw,48px);font-weight:900;letter-spacing:-.025em;margin-top:6px;text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-#versus{flex:0 0 9%;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,2vw,38px);font-weight:900;color:#dce3ef;border-left:1px solid #576374;border-right:1px solid #576374}
-#footer{height:17%;background:rgba(0,0,0,.38);border-top:1px solid #314254;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,.83vw,15px);letter-spacing:.24em;color:#b9c6d6;text-transform:uppercase}
+.word{min-width:0;flex:1;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}.right .word{align-items:flex-start}
+.small{display:block;max-width:100%;font-size:15px;letter-spacing:.20em;color:#d1d8e1!important;font-weight:700;text-transform:uppercase;white-space:nowrap;overflow:visible;line-height:1.2}
+.big{display:block;max-width:100%;font-size:41px;font-weight:900;letter-spacing:-.035em;color:#ffffff!important;margin-top:6px;line-height:1.05;text-transform:uppercase;white-space:nowrap;overflow:visible;text-shadow:0 2px 3px rgba(0,0,0,.28)}
+#versus{flex:0 0 8%;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,2vw,38px);font-weight:900;color:#dce3ef;border-left:1px solid #576374;border-right:1px solid #576374}
+#footer{height:17%;background:rgba(1,7,13,.22);border-top:1px solid #314254;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,.83vw,15px);letter-spacing:.24em;color:#b9c6d6;text-transform:uppercase}
 body.controller{height:auto;overflow:auto;background:#eaf0f4;color:#182638}
 body.controller #stage{width:100%;height:auto;aspect-ratio:16/9;background:linear-gradient(#101a2b 0 52%,#8a6747 53%,#bb9465);border-radius:9px}
 body.controller #banner{visibility:hidden;opacity:0}
@@ -56,7 +56,7 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
 <div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
 <div id="editor">
-<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=12" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=13" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
 <p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
 <div class="grid">
@@ -64,12 +64,12 @@ button.green{background:#18825a}button.red{background:#af3239}button.gray{backgr
 <div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=12"></script><script src="./matchup-eagle.js?v=12"></script>
+<script src="./logo.js?v=13"></script><script src="./matchup-eagle.js?v=13"></script>
 <script>
 (function(){
 'use strict';
 const CONFIG='htv-vb-matchup-v1',DISPLAY='htv-vb-matchup-display-v1';
-const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',footer:'VOLLEYBALL | GAME DAY',width:85,height:27,top:50};
+const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
 const params=new URLSearchParams(location.search),controller=params.has('control'),testing=params.has('test');
 const $=id=>document.getElementById(id);
 let volatile={},lastTick=null,lastVisible=false,animationTimer=0;
@@ -86,6 +86,24 @@ function logo(side,s){let custom=s[side+'Logo']||'',name=safeText(s[side+'Name']
  if(name.indexOf('MUSTANG')>=0)return (typeof DEFAULT_LOGO!=='undefined'?DEFAULT_LOGO:'');
  return '';
 }
+function fitText(){
+ const b=$('banner'),scale=Math.max(.32,Math.min(1,b.getBoundingClientRect().width/1580));
+ const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+ for(const side of ['left','right']){
+  const word=$(side+'Name').parentElement, available=Math.max(35,word.clientWidth-3);
+  for(const [id,base,min,weight,spacing] of [[side+'Small',20,8,700,.20],[side+'Name',48,12,900,-.035]]){
+   const node=$(id),value=node.textContent||'',max=base*scale;
+   let size=Math.max(min,max);
+   while(size>min){
+    ctx.font=weight+' '+size+'px Arial';
+    const width=ctx.measureText(value).width+Math.max(0,value.length-1)*Math.abs(spacing)*size;
+    if(width<=available)break;
+    size-=.5;
+   }
+   node.style.fontSize=size+'px';
+  }
+ }
+}
 function render(){
  const s=config(),b=$('banner');
  b.style.width=Math.min(98,Math.max(55,Number(s.width)||85))+'%';
@@ -100,6 +118,7 @@ function render(){
   else{img.hidden=true;img.removeAttribute('src');letter.hidden=false;letter.textContent=(s[side+'Name']||'?').charAt(0).toUpperCase()}
  }
  $('footer').textContent=safeText(s.footer);
+ fitText();
  if(controller){
   for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
    const field=$(k+'Input');if(document.activeElement!==field)field.value=s[k];
@@ -150,6 +169,7 @@ if(controller){
  $('replay').addEventListener('click',()=>command(true));
 }
 window.addEventListener('storage',e=>{if(e.key===CONFIG)render();if(e.key===DISPLAY)updateVisibility()});
+ window.addEventListener('resize',render);
 render();updateVisibility();
 setInterval(()=>{render();updateVisibility()},300);
 })();
