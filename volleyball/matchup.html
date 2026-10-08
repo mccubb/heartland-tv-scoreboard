@@ -32,6 +32,7 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #56ab
 .team-right{border-right:7px solid var(--right-accent);justify-content:flex-end}
 .logo-slot{flex:0 0 min(11vw,185px);height:78%;display:grid;place-items:center;min-width:0;position:relative;z-index:2}
 .logo-slot img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.33))}
+.logo-slot img[hidden],.logo-preview[hidden]{display:none!important}
 .logo-placeholder{font-size:clamp(25px,5vw,92px);font-weight:900;color:#fff;opacity:.88;line-height:1}
 .wordmark{min-width:0;position:relative;z-index:2;line-height:1.05}
 .kicker{font-size:clamp(9px,1.12vw,20px);font-weight:700;letter-spacing:.32em;color:#c6cfda;margin-bottom:.55vw;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
@@ -247,7 +248,7 @@ input[type=range]{padding:0}
  if(wire)wire.start({role:isControl?'controller':(isPreview?'preview':'overlay'),snapshotConfig:state,snapshotDisplay:showState,
   config:fromRemoteConfig,display:fromRemoteDisplay,
   status:status=>{if(isControl){el('connectionStatus').textContent='Live sync: '+status;el('connectionStatus').style.color=status==='Connected'?'#087a55':'#bc6125'}},
-  presence:(v,t)=>{if(v?.active)onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}
+  presence:(v,t)=>{if(v?.active&&Number.isFinite(t)&&Date.now()-t<42000){onlineHeartbeat=Date.now();if(isControl){el('overlayStatus').textContent='Overlay connected';el('overlayStatus').style.color='#087a55'}}}
  });
  paint();sync();
  if(!isControl)setInterval(()=>{paint();sync()},550);
