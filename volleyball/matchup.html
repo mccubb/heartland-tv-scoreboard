@@ -132,7 +132,8 @@ input[type=range]{padding:0}
  </div>
  <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. Pages opened in different tabs on the <strong>same browser</strong> sync immediately, just like your volleyball scoreboard. Separate computers use a <strong>public demo live messaging service</strong> to send team settings and SHOW/HIDE commands to your YoloBox on another device. Check the LIVE / OVERLAY indicators above before a game. Demo servers are not guaranteed for productions; switch to a private realtime service before relying on it for critical broadcasts. Do not enter private data.</div>
 </div>
-<script src="./matchup-eagle.js?v=7"></script>
+<script src="./logo.js?v=9"></script>
+<script src="./matchup-eagle.js?v=9"></script>
 <script src="./matchup-sync.js?v=7"></script>
 <script>
 'use strict';
@@ -140,7 +141,7 @@ input[type=range]{padding:0}
  const CONFIG='htv-vb-matchup-v1', DISPLAY='htv-vb-matchup-display-v1';
  let broadcast=null;try{broadcast=new BroadcastChannel('htv-volleyball-matchup');}catch(e){}
  function postToPreview(){/* Preview is rendered directly from the same DOM and state; no iframe messaging needed. */}
- const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:window.MATCHUP_EAGLE_LOGO||'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
+ const defaults={leftKicker:'VISITORS',leftName:'EAGLES',leftColor:'#1267ad',leftLogo:'',rightKicker:'HOME',rightName:'OPPONENT',rightColor:'#125287',rightLogo:'',footer:'VOLLEYBALL  |  GAME DAY',width:85,height:27,top:50,opacity:.93};
  const qs=new URLSearchParams(location.search),isControl=qs.has('control'),isPreview=qs.has('preview'),isTest=qs.has('test');
  const el=id=>document.getElementById(id);
  const inMemory={};
@@ -151,12 +152,22 @@ input[type=range]{padding:0}
  function msg(t){if(el('msg'))el('msg').textContent=t}
  function save(v){try{persist(CONFIG,Object.assign(state(),v));paint();postToPreview();broadcast?.postMessage({type:'config',value:state()});window.MatchupWire?.publish('config',state());msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
  function escapeNo(s){return String(s||'').trim().toUpperCase()}
+ function resolveLogo(side,s){
+  const name=escapeNo(s[side+'Name']);
+  let custom=s[side+'Logo']||'';
+  // Older builds accidentally saved the Eagles default on the wrong team.
+  if(custom===window.MATCHUP_EAGLE_LOGO&&!/EAGLES?/i.test(name))custom='';
+  if(custom)return custom;
+  if(/EAGLES?/i.test(name))return window.MATCHUP_EAGLE_LOGO||'';
+  if(/MUSTANGS?/i.test(name))return typeof DEFAULT_LOGO!=='undefined'?DEFAULT_LOGO:'';
+  return '';
+ }
  function paint(){
   const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
   for(const side of ['left','right']){
    el(side+'Name').textContent=escapeNo(s[side+'Name'])||'TEAM';
    el(side+'Kicker').textContent=escapeNo(s[side+'Kicker']);
-   const logo=el(side+'Logo'),src=s[side+'Logo']||(/EAGLES?/i.test(s[side+'Name'])?window.MATCHUP_EAGLE_LOGO:'');
+   const logo=el(side+'Logo'),src=resolveLogo(side,s);
    if(src){if(logo.getAttribute('src')!==src)logo.src=src;logo.hidden=false;el(side+'Initial').hidden=true}
    else{logo.hidden=true;logo.removeAttribute('src');el(side+'Initial').hidden=false;el(side+'Initial').textContent=(escapeNo(s[side+'Name'])||'?').slice(0,1)}
   }
@@ -165,7 +176,7 @@ input[type=range]{padding:0}
    ['leftKicker','leftName','leftColor','rightKicker','rightName','rightColor','footer','width','height','top','opacity'].forEach(k=>{
     const id=k+'Input',node=el(id);if(node&&document.activeElement!==node)node.value=s[k];
    });
-   for(const side of ['left','right']){const p=el(side+'Preview'),src=s[side+'Logo']||(/EAGLES?/i.test(s[side+'Name'])?window.MATCHUP_EAGLE_LOGO:'');p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
+   for(const side of ['left','right']){const p=el(side+'Preview'),src=resolveLogo(side,s);p.hidden=!src;if(src&&p.getAttribute('src')!==src)p.src=src;if(!src)p.removeAttribute('src')}
   }
  }
  let timer=0,oldTick=null,oldVisible=null,onlineHeartbeat=0;
