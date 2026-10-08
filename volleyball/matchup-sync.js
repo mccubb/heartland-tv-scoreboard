@@ -4,7 +4,7 @@
    Same-browser localStorage works independently when offline. */
 (function(){
 'use strict';
-const TOPIC='heartland-tv/demo/volleyball/matchup/v4-7bc871cd2a0e4f44a93650dc198f552b';
+let TOPIC='heartland-tv/demo/volleyball/matchup/v4-7bc871cd2a0e4f44a93650dc198f552b';
 const URLS=['wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
 const enc=new TextEncoder(),dec=new TextDecoder();
 const byteString=s=>{const b=enc.encode(String(s));return [...[(b.length>>8)&255,b.length&255],...b]};
@@ -81,7 +81,7 @@ function setup(url){
 }
 function fail(){serverIndex=(serverIndex+1)%URLS.length;clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>setup(URLS[serverIndex]),3500)}
 window.MatchupWire={
- start(opts){Object.assign(callbacks,opts);client='htv-'+Math.random().toString(36).slice(2)+'-'+Date.now().toString(36);setup(URLS[0])},
+ start(opts){Object.assign(callbacks,opts);if(opts.room&&/^[a-zA-Z0-9_-]{12,80}$/.test(opts.room))TOPIC='heartland-tv/share/volleyball/matchup/'+opts.room;client='htv-'+Math.random().toString(36).slice(2)+'-'+Date.now().toString(36);setup(URLS[0])},
  publish(type,payload){return broadcast(type,payload)},
  get connected(){return ready}
 };
