@@ -84,6 +84,23 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  }
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
+ // Special single-zero guard. On some physical seven-segment boards the six
+ // outer bars of 0 are separated enough that projection grouping can split
+ // one "0" into a false "17". Before grouping digits, test the entire crop as
+ // one glyph. Only accept 0 when all six outer segments are strong and the
+ // middle segment is clearly off; this does not match a real 17.
+ {
+  let left=w,right=-1;for(let y=top;y<=bottom;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){left=Math.min(left,x);right=Math.max(right,x)}
+  const gw=right-left+1,gh=height;
+  if(gw>gh*.34&&gw<gh*.95){
+   const zregs=[[.22,0,.78,.17],[.7,.16,1,.43],[.7,.57,1,.86],[.22,.84,.78,1],[0,.57,.3,.86],[0,.16,.3,.43],[.22,.42,.78,.59]];
+   const cov=zregs.map(([x0,y0,x1,y1])=>{let on=0,total=0;for(let y=Math.floor(top+y0*gh);y<Math.ceil(top+y1*gh);y++)for(let x=Math.floor(left+x0*gw);x<Math.ceil(left+x1*gw);x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(ink[y*w+x])on++}return on/Math.max(1,total)});
+   const outer=Math.min(...cov.slice(0,6)),middle=cov[6],peak=Math.max(...cov.slice(0,6));
+   if(outer>=Math.max(.10,peak*.24)&&middle<=Math.max(.12,peak*.28)){
+    const value=parseReading(key,'0');if(value!==null)return {value,text:'0',confidence:96,method:'Seven-segment · zero guard'};
+   }
+  }
+ }
  let runs=[];let start=-1,gap=0;const maxGap=false?1:Math.max(1,Math.round(height*.035));
  for(let x=0;x<=w+maxGap;x++){if(x<w&&cols[x]>0){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){runs.push({left:start,right:x-gap});start=-1}}
  // Tight, leaning digits can overlap in the column projection. Keep their
