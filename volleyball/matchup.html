@@ -106,7 +106,7 @@ input[type=range]{padding:0}
 <div id="controlView">
  <div class="head"><h1>HEARTLAND TV — MATCHUP CONTROL <span id="status" class="status">HIDDEN</span></h1><p>TV-style matchup screen for volleyball. <a href="./matchup.html" target="_blank">Open transparent overlay ↗</a> · <a href="./index.html" target="_blank">Volleyball scoreboard ↗</a></p></div>
  <div class="grid">
-  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">The preview below updates instantly. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1"></iframe></section>
+  <section class="panel wide"><h2>On-air controls</h2><div class="actions"><button id="show" class="show">▶ SHOW MATCHUP</button><button id="hide" class="hide">✕ HIDE MATCHUP</button><button id="replay" class="secondary">↻ Replay entrance</button></div><div class="mini" style="padding:9px 0"><b id="connectionStatus">Live sync connecting…</b> · <b id="overlayStatus">Waiting for overlay…</b></div><p class="mini">The preview below updates instantly. For a browser test where the graphic is always visible, <a href="./matchup.html?test=1" target="_blank">open test view ↗</a>. A blank white normal browser tab means the transparent overlay is hidden—not necessarily broken.</p><p class="mini">SHOW expands from the center as the logos slide in. HIDE folds the matchup back into the center. The actual overlay URL has a transparent background, so your live court camera stays behind it.</p><iframe id="previewFrame" title="Matchup preview" src="./matchup.html?preview=1&amp;v=7"></iframe></section>
   <section class="panel">
    <h2>Left team</h2>
    <label for="leftKickerInput">Small text above name</label><input id="leftKickerInput" maxlength="40" placeholder="VISITORS">
@@ -132,8 +132,8 @@ input[type=range]{padding:0}
  </div>
  <div class="notice"><strong>Important for a separate YoloBox:</strong> GitHub Pages is a static website. This version uses a <strong>public demo live messaging service</strong> to send team settings and SHOW/HIDE commands to your YoloBox on another device. Check the LIVE / OVERLAY indicators above before a game. Demo servers are not guaranteed for productions; switch to a private realtime service before relying on it for critical broadcasts. Do not enter private data.</div>
 </div>
-<script src="./matchup-eagle.js?v=4"></script>
-<script src="./matchup-sync.js?v=4"></script>
+<script src="./matchup-eagle.js?v=7"></script>
+<script src="./matchup-sync.js?v=7"></script>
 <script>
 'use strict';
 (function(){
