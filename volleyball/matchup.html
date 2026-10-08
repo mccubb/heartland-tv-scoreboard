@@ -199,7 +199,7 @@ const $=id=>document.getElementById(id);
 let volatile={},lastTick=null,lastVisible=false,animationTimer=0;
 function read(key){let obj={};try{obj=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){obj=volatile[key]||{}}return obj}
 function store(key,value){volatile[key]=value;try{localStorage.setItem(key,JSON.stringify(value))}catch(e){}}
-if(sharedSnapshot){try{const data=unpack(sharedSnapshot);if(data&&typeof data==='object'&&typeof data.leftName==='string'&&typeof data.rightName==='string'&&!read(CONFIG).leftName)store(CONFIG,data)}catch(e){/* invalid shared snapshot; stay on existing settings */}try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
+if(sharedSnapshot){try{const data=unpack(sharedSnapshot);if(data&&typeof data==='object'&&typeof data.leftName==='string'&&typeof data.rightName==='string')store(CONFIG,data)}catch(e){/* invalid shared snapshot; stay on existing settings */}try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
 function config(){const c=read(CONFIG);return {...DEFAULT,...c,
 leftSmall:c.leftSmall!==undefined?c.leftSmall:(c.leftKicker||DEFAULT.leftSmall),
 rightSmall:c.rightSmall!==undefined?c.rightSmall:(c.rightKicker||DEFAULT.rightSmall)}}
