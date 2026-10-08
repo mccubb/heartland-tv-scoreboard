@@ -8,7 +8,7 @@
   if(!room||typeof Peer==='undefined') return;
   localStorage.setItem(ROOM_KEY,room);
   const hostId='heartland-vb-'+room.toLowerCase();
-  let peer=null,hostConn=null,lastSeen=localStorage.getItem(STATE_KEY)||'',reconnectTimer=null;
+  let peer=null,hostConn=null,lastSeen=localStorage.getItem(STATE_KEY)||'',reconnectTimer=null,sharedState=null;
   const clients=new Set();
   const setStatus=t=>{const el=document.getElementById('syncStatus');if(el)el.textContent=t};
   const validState=s=>s&&typeof s==='object'&&('homeScore'in s||'awayScore'in s||'homeSets'in s||'awaySets'in s);
@@ -22,23 +22,24 @@
   }
   function current(){try{return JSON.parse(localStorage.getItem(STATE_KEY)||'{}')}catch{return {}}}
   function broadcast(state){for(const c of [...clients]){if(c.open){try{c.send({type:'state',state})}catch{}}else clients.delete(c)}}
+  function mergeCameraFields(base,next){const out={...(base||{})};for(const k of ['homeScore','awayScore','homeSets','awaySets'])if(k in next)out[k]=next[k];return out}
   function watchLocal(){
     setInterval(()=>{
       const now=localStorage.getItem(STATE_KEY)||'';
       if(now===lastSeen)return;
       lastSeen=now;
       let state;try{state=JSON.parse(now||'{}')}catch{return}
-      if(role==='host')broadcast(state);
+      if(role==='host'){sharedState=mergeCameraFields(sharedState||current(),state);const json=JSON.stringify(sharedState);lastSeen=json;localStorage.setItem(STATE_KEY,json);broadcast(sharedState)}
       else if(hostConn?.open){try{hostConn.send({type:'state',state})}catch{}}
     },180);
   }
   function setupHost(){
-    peer=new Peer(hostId);
+    sharedState=current();peer=new Peer(hostId);
     peer.on('open',()=>setStatus('LIVE SYNC: camera computer is hosting room '+room));
     peer.on('connection',conn=>{
       clients.add(conn);
-      conn.on('open',()=>{try{conn.send({type:'state',state:current()})}catch{}});
-      conn.on('data',msg=>{if(msg?.type==='state'&&validState(msg.state)){applyRemote(msg.state);broadcast(msg.state)}else if(msg?.type==='request'){try{conn.send({type:'state',state:current()})}catch{}}});
+      conn.on('open',()=>{try{conn.send({type:'state',state:sharedState||current()})}catch{}});
+      conn.on('data',msg=>{if(msg?.type==='state'&&validState(msg.state)){sharedState=msg.state;applyRemote(sharedState);broadcast(sharedState)}else if(msg?.type==='request'){try{conn.send({type:'state',state:sharedState||current()})}catch{}}});
       conn.on('close',()=>clients.delete(conn));
     });
     peer.on('error',e=>setStatus('LIVE SYNC error: '+(e.type||e.message)));
