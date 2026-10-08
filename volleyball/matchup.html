@@ -44,7 +44,7 @@ input[type=color]{padding:2px;height:42px}input[type=range]{padding:0;accent-col
 .buttons{display:flex;gap:9px;flex-wrap:wrap}
 button{background:#22547e;color:white;border:0;padding:13px 18px;border-radius:7px;font-weight:800;cursor:pointer}
 button.green{background:#18825a}button.red{background:#af3239}button.gray{background:#506176}
-#livePreview{margin-top:12px;border-radius:10px;overflow:hidden;background:#0b1725}
+#shareLinks input{font-size:12px;background:#f4f8fc}.share-panel{border:1px solid #d1dfeb;background:#f2f8fd;padding:14px;border-radius:9px;margin:12px 0}.share-panel button{margin:4px 0}#livePreview{margin-top:12px;border-radius:10px;overflow:hidden;background:#0b1725}
 #status{font-size:13px;font-weight:800;color:#18588e}
 .note{font-size:13px;color:#586677;line-height:1.4}
 @media(max-width:650px){.grid,.row{grid-template-columns:1fr}.side{gap:1vw;padding:1%}.mark{flex-basis:22%}.big{font-size:3vw}}
@@ -168,25 +168,38 @@ body.controller #stage{width:100%;height:auto;aspect-ratio:16/9}
 <div class="side right"><div class="word"><div class="small" id="rightSmall">HOME</div><div class="big" id="rightName">MUSTANGS</div></div><div class="mark"><img id="rightLogo" alt="Right team logo" hidden><span id="rightLetter">M</span></div></div></div>
 <div id="footer">VOLLEYBALL • GAME DAY</div></section></div>
 <div id="editor">
-<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=24" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
+<header><h1>HEARTLAND TV — MATCHUP CONTROL</h1><div>Same browser connection as your volleyball scoreboard · <a href="./matchup.html?v=25" target="_blank">OPEN OVERLAY IN SECOND CHROME TAB</a></div></header>
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
-<p id="status">Initializing…</p><p class="note">Your live preview below uses the same graphic as the overlay. Both tabs must be in Chrome on the same computer.</p><div id="livePreview"></div></div>
+<p id="status">Initializing…</p><div class="share-panel"><strong>Use the matchup on another computer</strong><p class="note">Click Start sharing, then send the new controller and overlay links below to your Mac. These links include your current teams, colors, and logos. Keep both pages open for live changes.</p><button type="button" id="startShare">START SHARING BETWEEN COMPUTERS</button><p class="note" id="shareStatus">Local browser only</p><div id="shareLinks" hidden><label>Controller link — edit from another computer<input id="shareControlLink" readonly></label><button type="button" class="gray" id="copyControlLink">Copy controller link</button><label>Overlay link — display on another computer<input id="shareOverlayLink" readonly></label><button type="button" class="gray" id="copyOverlayLink">Copy overlay link</button></div></div><p class="note">Preview and overlay use the same layout. Cross-computer live updates depend on a public demo messaging service; if it disconnects, the shared links still carry your saved matchup.</p><div id="livePreview"></div></div>
 <div class="grid">
 <div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><label>Logo scale: <strong class="scale-value" id="leftScaleValue">0</strong> / 100<input type="range" id="leftScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
 <div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=24"></script><script src="./matchup-eagle.js?v=24"></script>
+<script src="./logo.js?v=25"></script><script src="./matchup-eagle.js?v=25"></script><script src="./matchup-sync.js?v=25"></script>
 <script>
 (function(){
 'use strict';
 const CONFIG='htv-vb-matchup-v1',DISPLAY='htv-vb-matchup-display-v1';
 const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',leftScale:0,rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',rightScale:0,footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
 const params=new URLSearchParams(location.search),controller=params.has('control'),testing=params.has('test');
+const hashParams=new URLSearchParams(location.hash.slice(1));
+const sharedRoom=params.get('room')||'';
+const sharedSnapshot=hashParams.get('cfg')||'';
+let remoteEnabled=false,remoteApplying=false,lastLiveStatus='Not connected';
+function pack(value){const bytes=new TextEncoder().encode(JSON.stringify(value));let binary='';for(let i=0;i<bytes.length;i+=4096)binary+=String.fromCharCode(...bytes.slice(i,i+4096));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function unpack(value){const b=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(b+'='.repeat((4-b.length%4)%4));return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary,c=>c.charCodeAt(0))))}
+function validRoom(value){return /^[a-zA-Z0-9_-]{12,80}$/.test(value)}
+function makeRoom(){const a=new Uint8Array(16);crypto.getRandomValues(a);return Array.from(a,v=>v.toString(16).padStart(2,'0')).join('')}
+function shareUrl(isControl){const url=new URL(location.href);url.search='';url.searchParams.set('v','25');if(isControl)url.searchParams.set('control','1');url.searchParams.set('room',activeRoom);url.hash='cfg='+pack(config());return url.href}
+function refreshShareLinks(){if(!controller||!activeRoom)return;$('shareLinks').hidden=false;$('shareControlLink').value=shareUrl(true);$('shareOverlayLink').value=shareUrl(false)}
+let activeRoom=validRoom(sharedRoom)?sharedRoom:'';
+
 const $=id=>document.getElementById(id);
 let volatile={},lastTick=null,lastVisible=false,animationTimer=0;
 function read(key){let obj={};try{obj=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){obj=volatile[key]||{}}return obj}
 function store(key,value){volatile[key]=value;try{localStorage.setItem(key,JSON.stringify(value))}catch(e){}}
+if(sharedSnapshot){try{const data=unpack(sharedSnapshot);if(data&&typeof data==='object'&&typeof data.leftName==='string'&&typeof data.rightName==='string')store(CONFIG,data)}catch(e){/* invalid shared snapshot; stay on existing settings */}}
 function config(){const c=read(CONFIG);return {...DEFAULT,...c,
 leftSmall:c.leftSmall!==undefined?c.leftSmall:(c.leftKicker||DEFAULT.leftSmall),
 rightSmall:c.rightSmall!==undefined?c.rightSmall:(c.rightKicker||DEFAULT.rightSmall)}}
@@ -265,8 +278,8 @@ function updateVisibility(){
  }
  lastTick=d.tick;lastVisible=!!d.visible;
 }
-function update(k,v){const s=config();s[k]=v;store(CONFIG,s);render()}
-function command(on){store(DISPLAY,{visible:on,tick:Date.now()+Math.random()});updateVisibility()}
+function update(k,v){const s=config();s[k]=v;store(CONFIG,s);render();refreshShareLinks();if(remoteEnabled&&!remoteApplying)window.MatchupWire?.publish('config',s)}
+function command(on){store(DISPLAY,{visible:on,tick:Date.now()+Math.random()});updateVisibility();if(remoteEnabled&&!remoteApplying)window.MatchupWire?.publish('display',display())}
 function importLogo(side,input){
  const file=input.files&&input.files[0];if(!file)return;
  const u=URL.createObjectURL(file),img=new Image();
@@ -274,8 +287,30 @@ function importLogo(side,input){
  catch(e){alert('Could not save the logo: '+e.message)}finally{URL.revokeObjectURL(u);input.value=''}};
  img.onerror=()=>{URL.revokeObjectURL(u);alert('Please select a PNG, JPG, or WebP logo.')};img.src=u;
 }
+function startRemote(){
+ if(!validRoom(activeRoom)||remoteEnabled||!window.MatchupWire)return;
+ remoteEnabled=true;
+ window.MatchupWire.start({room:activeRoom,role:controller?'controller':'overlay',snapshotConfig:config,snapshotDisplay:display,
+ config:value=>{if(!value||typeof value!=='object'||typeof value.leftName!=='string')return;remoteApplying=true;store(CONFIG,value);render();refreshShareLinks();remoteApplying=false},
+ display:value=>{if(!value||typeof value!=='object')return;remoteApplying=true;store(DISPLAY,value);updateVisibility();remoteApplying=false},
+ status:status=>{lastLiveStatus=status;if(controller)$('shareStatus').textContent='Live connection: '+status+' — share the links below'},
+ presence:()=>{}
+ });
+}
+function beginSharing(){
+ if(!activeRoom){activeRoom=makeRoom();const url=new URL(location.href);url.searchParams.set('room',activeRoom);url.hash='cfg='+pack(config());history.replaceState(null,'',url.href)}
+ refreshShareLinks();startRemote();
+ if(controller)$('startShare').textContent='REFRESH SHARING LINKS';
+}
 if(controller){
  document.body.classList.add('controller');
+ $('startShare').addEventListener('click',beginSharing);
+ for(const side of ['Control','Overlay'])$('copy'+side+'Link').addEventListener('click',async()=>{
+  const input=$('share'+side+'Link');input.select();try{await navigator.clipboard.writeText(input.value)}catch(e){document.execCommand('copy')}
+  $('shareStatus').textContent=side+' link copied. Paste it into an email to your Mac.';
+ });
+ if(activeRoom){refreshShareLinks();$('startShare').textContent='REFRESH SHARING LINKS'}
+
  $('livePreview').appendChild($('stage'));
  for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
   $(k+'Input').addEventListener('input',e=>update(k,['width','height','top'].includes(k)?Number(e.target.value):e.target.value));
@@ -291,7 +326,7 @@ if(controller){
 }
 window.addEventListener('storage',e=>{if(e.key===CONFIG)render();if(e.key===DISPLAY)updateVisibility()});
  window.addEventListener('resize',render);
-render();updateVisibility();
+render();updateVisibility();if(activeRoom)startRemote();
 setInterval(()=>{render();updateVisibility()},300);
 })();
 </script></body></html>
