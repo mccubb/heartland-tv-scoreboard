@@ -183,9 +183,9 @@ input[type=range]{padding:0}
  function visibility(next,replay){
   const m=el('match');clearTimeout(timer);m.classList.remove('shown','entering','hiding');
   void m.offsetWidth;
-  if(next){m.style.visibility='';m.style.opacity='';m.classList.add('entering');timer=setTimeout(()=>{m.classList.remove('entering');m.classList.add('shown')},900)}
+  if(next){m.style.visibility='visible';m.style.opacity='1';m.classList.add('entering');timer=setTimeout(()=>{m.classList.remove('entering');m.classList.add('shown');m.style.visibility='visible';m.style.opacity='1'},900)}
   else if(oldVisible===null){m.style.visibility='hidden';m.style.opacity='0';}
-  else{m.style.visibility='';m.style.opacity='';m.classList.add('hiding');timer=setTimeout(()=>{m.classList.remove('hiding');m.style.visibility='hidden';m.style.opacity='0'},710)}
+  else{m.style.visibility='visible';m.style.opacity='1';m.classList.add('hiding');timer=setTimeout(()=>{m.classList.remove('hiding');m.style.visibility='hidden';m.style.opacity='0'},710)}
  }
  function sync(){
   const d=showState(),changed=d.tick!==oldTick||d.visible!==oldVisible;
