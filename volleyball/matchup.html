@@ -13,7 +13,7 @@ button,input{font:inherit}
 button{cursor:pointer}
 button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #56abff;outline-offset:3px}
 #stage{position:relative;width:100%;height:100%;pointer-events:none}
-#match{--left-accent:#1561a2;--right-accent:#a53b3e;--opacity:.93;--w:85;--h:27;--y:50;position:absolute;left:50%;top:calc(var(--y)*1%);width:calc(var(--w)*1%);height:calc(var(--h)*1%);min-height:0;overflow:hidden;visibility:hidden;opacity:0;transform:translate(-50%,-50%);background:rgba(7,14,23,var(--opacity));border:1px solid rgba(223,231,241,.35);box-shadow:0 12px 25px rgba(0,0,0,.46),inset 0 1px rgba(255,255,255,.09);display:flex;flex-direction:column}
+#match{--left-accent:#1561a2;--right-accent:#a53b3e;--opacity:.93;--w:85%;--h:27%;--y:50%;position:absolute;left:50%;top:var(--y);width:var(--w);height:var(--h);min-height:0;overflow:hidden;visibility:hidden;opacity:0;transform:translate(-50%,-50%);background:rgba(7,14,23,var(--opacity));border:1px solid rgba(223,231,241,.35);box-shadow:0 12px 25px rgba(0,0,0,.46),inset 0 1px rgba(255,255,255,.09);display:flex;flex-direction:column}
 #match:before{position:absolute;content:"";inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent 48%,rgba(0,0,0,.16));z-index:4}
 #match:after{position:absolute;content:"";bottom:0;left:-35%;width:30%;height:2px;background:#f4faff;box-shadow:0 0 10px #b8d7ff;z-index:8;opacity:0}
 #match.entering:after{animation:sweep 820ms 150ms ease-out}
@@ -145,7 +145,7 @@ input[type=range]{padding:0}
  function save(v){try{localStorage.setItem(CONFIG,JSON.stringify(Object.assign(state(),v)));paint();msg('Saved automatically.')}catch(e){msg('Could not save logo. Try a smaller image.')} }
  function escapeNo(s){return String(s||'').trim().toUpperCase()}
  function paint(){
-  const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85)));m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27)));m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50)));
+  const s=state(),m=el('match');m.style.setProperty('--left-accent',s.leftColor);m.style.setProperty('--right-accent',s.rightColor);m.style.setProperty('--opacity',Number(s.opacity));m.style.setProperty('--w',Math.max(55,Math.min(98,+s.width||85))+'%');m.style.setProperty('--h',Math.max(17,Math.min(44,+s.height||27))+'%');m.style.setProperty('--y',Math.max(22,Math.min(78,+s.top||50))+'%');
   for(const side of ['left','right']){
    el(side+'Name').textContent=escapeNo(s[side+'Name'])||'TEAM';
    el(side+'Kicker').textContent=escapeNo(s[side+'Kicker']);
