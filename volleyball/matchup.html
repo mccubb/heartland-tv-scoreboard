@@ -172,8 +172,8 @@ body.controller #stage{width:100%;height:auto;aspect-ratio:16/9}
 <div class="card"><h2>Show / hide matchup</h2><div class="buttons"><button class="green" id="show">▶ SHOW MATCHUP</button><button class="red" id="hide">✕ HIDE MATCHUP</button><button class="gray" id="replay">↻ REPLAY ENTRANCE</button></div>
 <p id="status">Initializing…</p><div class="share-panel"><strong>Use the matchup on another computer</strong><p class="note">Click Start sharing, then send the new controller and overlay links below to your Mac. These links include your current teams, colors, and logos. Keep both pages open for live changes.</p><button type="button" id="startShare">START SHARING BETWEEN COMPUTERS</button><p class="note" id="shareStatus">Local browser only</p><div id="shareLinks" hidden><label>Controller link — edit from another computer<input id="shareControlLink" readonly></label><button type="button" class="gray" id="copyControlLink">Copy controller link</button><label>Overlay link — display on another computer<input id="shareOverlayLink" readonly></label><button type="button" class="gray" id="copyOverlayLink">Copy overlay link</button></div></div><p class="note">Preview and overlay use the same layout. Cross-computer live updates depend on a public demo messaging service; if it disconnects, the shared links still carry your saved matchup.</p><div id="livePreview"></div></div>
 <div class="grid">
-<div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><label>Logo scale: <strong class="scale-value" id="leftScaleValue">0</strong> / 100<input type="range" id="leftScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
-<div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
+<div class="card"><h2>Left team</h2><label>School / small text<input id="leftSmallInput"></label><label>Team name<input id="leftNameInput"></label><label>Accent color<input type="color" id="leftColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="leftFile"></label><label>Logo scale: <strong class="scale-value" id="leftScaleValue">0</strong> / 100<input type="range" id="leftScaleInput" min="0" max="100" step="1" value="0"></label><div class="row"><label>Logo left/right (%)<input id="leftLogoXInput" type="number" min="-50" max="50" step="1"></label><label>Logo up/down (%)<input id="leftLogoYInput" type="number" min="-50" max="50" step="1"></label></div><label>Logo rotation (degrees)<input id="leftLogoRotateInput" type="number" min="-45" max="45" step="1"></label><button class="gray" id="leftLogoReset">Reset logo position</button><button class="gray" id="leftRemove">Clear uploaded logo</button></div>
+<div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><div class="row"><label>Logo left/right (%)<input id="rightLogoXInput" type="number" min="-50" max="50" step="1"></label><label>Logo up/down (%)<input id="rightLogoYInput" type="number" min="-50" max="50" step="1"></label></div><label>Logo rotation (degrees)<input id="rightLogoRotateInput" type="number" min="-45" max="45" step="1"></label><button class="gray" id="rightLogoReset">Reset logo position</button><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
 <script src="./logo.js?v=25"></script><script src="./matchup-eagle.js?v=25"></script><script src="./matchup-sync.js?v=25"></script>
@@ -181,7 +181,7 @@ body.controller #stage{width:100%;height:auto;aspect-ratio:16/9}
 (function(){
 'use strict';
 const CONFIG='htv-vb-matchup-v1',DISPLAY='htv-vb-matchup-display-v1';
-const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',leftScale:0,rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',rightScale:0,footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
+const DEFAULT={leftSmall:'VISITORS',leftName:'EAGLES',leftColor:'#185a99',leftLogo:'',leftScale:0,leftLogoX:0,leftLogoY:0,leftLogoRotate:0,rightSmall:'HEARTLAND CHRISTIAN',rightName:'MUSTANGS',rightColor:'#185a99',rightLogo:'',rightScale:0,rightLogoX:0,rightLogoY:0,rightLogoRotate:0,footer:'VOLLEYBALL | GAME DAY',width:90,height:27,top:50};
 const params=new URLSearchParams(location.search),controller=params.has('control'),testing=params.has('test');
 const hashParams=new URLSearchParams(location.hash.slice(1));
 const sharedRoom=params.get('room')||'';
@@ -211,9 +211,9 @@ function logo(side,s){let custom=s[side+'Logo']||'',name=safeText(s[side+'Name']
  if(name.indexOf('MUSTANG')>=0)return (typeof DEFAULT_LOGO!=='undefined'?DEFAULT_LOGO:'');
  return '';
 }
-function centerVisibleLogo(img,scale){
- const apply=(dx=0,dy=0)=>{img.style.transform='translate('+dx.toFixed(2)+'%,'+dy.toFixed(2)+'%) scale('+scale+')'};
- if(!img.complete||!img.naturalWidth||!img.naturalHeight){img.onload=()=>centerVisibleLogo(img,scale);apply();return}
+function centerVisibleLogo(img,scale,manualX=0,manualY=0,rotate=0){
+ const apply=(dx=0,dy=0)=>{img.style.transform='translate('+(dx+manualX).toFixed(2)+'%,'+(dy+manualY).toFixed(2)+'%) rotate('+rotate+'deg) scale('+scale+')'};
+ if(!img.complete||!img.naturalWidth||!img.naturalHeight){img.onload=()=>centerVisibleLogo(img,scale,manualX,manualY,rotate);apply();return}
  try{
   const w=img.naturalWidth,h=img.naturalHeight,c=document.createElement('canvas');c.width=w;c.height=h;
   const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);
@@ -260,7 +260,7 @@ function render(){
   $(side+'Small').textContent=safeText(s[side+'Small']);
   $(side+'Name').textContent=safeText(s[side+'Name']);
   const img=$(side+'Logo'),letter=$(side+'Letter'),source=logo(side,s);
-  if(source){if(img.getAttribute('src')!==source)img.setAttribute('src',source);img.hidden=false;letter.hidden=true;img.classList.toggle('hcs-outline',safeText(s[side+'Name']).includes('MUSTANG'));centerVisibleLogo(img,1+Math.max(0,Math.min(100,Number(s[side+'Scale'])||0))/100)}
+  if(source){if(img.getAttribute('src')!==source)img.setAttribute('src',source);img.hidden=false;letter.hidden=true;img.classList.toggle('hcs-outline',safeText(s[side+'Name']).includes('MUSTANG'));centerVisibleLogo(img,1+Math.max(0,Math.min(100,Number(s[side+'Scale'])||0))/100,Math.max(-50,Math.min(50,Number(s[side+'LogoX'])||0)),Math.max(-50,Math.min(50,Number(s[side+'LogoY'])||0)),Math.max(-45,Math.min(45,Number(s[side+'LogoRotate'])||0)))}
   else{img.hidden=true;img.removeAttribute('src');img.style.transform='scale(1)';letter.hidden=false;letter.textContent=(s[side+'Name']||'?').charAt(0).toUpperCase()}
  }
  $('footer').textContent=safeText(s.footer);
@@ -269,7 +269,7 @@ function render(){
   for(const k of ['leftSmall','leftName','leftColor','rightSmall','rightName','rightColor','footer','width','height','top']){
    const field=$(k+'Input');if(document.activeElement!==field)field.value=s[k];
   }
-  for(const side of ['left','right']){const scale=Math.max(0,Math.min(100,Number(s[side+'Scale'])||0));$(side+'ScaleValue').textContent=scale;if(document.activeElement!==$(side+'ScaleInput'))$(side+'ScaleInput').value=scale}
+  for(const side of ['left','right']){const scale=Math.max(0,Math.min(100,Number(s[side+'Scale'])||0));$(side+'ScaleValue').textContent=scale;if(document.activeElement!==$(side+'ScaleInput'))$(side+'ScaleInput').value=scale;for(const k of ['LogoX','LogoY','LogoRotate']){const el=$(side+k+'Input');if(document.activeElement!==el)el.value=Number(s[side+k])||0}}
  }
 }
 function updateVisibility(){
@@ -331,6 +331,10 @@ if(controller){
  }
  for(const side of ['left','right']){
   $(side+'ScaleInput').addEventListener('input',e=>update(side+'Scale',Math.max(0,Math.min(100,Number(e.target.value)||0))));
+  $(side+'LogoXInput').addEventListener('input',e=>update(side+'LogoX',Math.max(-50,Math.min(50,Number(e.target.value)||0))));
+  $(side+'LogoYInput').addEventListener('input',e=>update(side+'LogoY',Math.max(-50,Math.min(50,Number(e.target.value)||0))));
+  $(side+'LogoRotateInput').addEventListener('input',e=>update(side+'LogoRotate',Math.max(-45,Math.min(45,Number(e.target.value)||0))));
+  $(side+'LogoReset').addEventListener('click',()=>{const s=config();s[side+'LogoX']=0;s[side+'LogoY']=0;s[side+'LogoRotate']=0;store(CONFIG,s);render();refreshShareLinks();if(remoteEnabled&&!remoteApplying)window.MatchupWire?.publish('config',s)});
   $(side+'File').addEventListener('change',e=>importLogo(side,e.target));
   $(side+'Remove').addEventListener('click',()=>update(side+'Logo',''));
  }
