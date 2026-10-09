@@ -1,14 +1,11 @@
 'use strict';
 const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','homeSets','awaySets'];
-let config={regions:{},reader:'segments',polarity:'dark',confidence:70,device:''};
+let config={regions:{},reader:'segments',polarity:'light',confidence:70,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-volleyball-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
 config.reader='segments';
+config.polarity='light';
 try{localStorage.setItem('htv-volleyball-camera',JSON.stringify(config))}catch(e){}
 
-// This gym camera shows DARK numerals on a BRIGHT face. Earlier builds
-// defaulted to inverted polarity, causing hollow zeroes to be decoded as 8s.
-// Correct that old default once. Users can still switch polarity manually.
-try{if(!localStorage.getItem('htv-vb-dark-digits-v1')){if(config.polarity==='light')config.polarity='dark';localStorage.setItem('htv-volleyball-camera',JSON.stringify(config));localStorage.setItem('htv-vb-dark-digits-v1','1')}}catch(e){}
 let stream=null,worker=null,loading=null,busy=false,running=false,generation=0,selected=null,drag=null,lastTest=null,verified=false;
 let candidates={},confirmed={};const video=byId('video'),overlay=byId('overlay'),ctx=overlay.getContext('2d');
 const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',homeSets:'#70ed9a',awaySets:'#e79bff'};
@@ -289,7 +286,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v13 · exact basketball number engine';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v14 · basketball engine + basketball polarity';
 buttons();
 
 
