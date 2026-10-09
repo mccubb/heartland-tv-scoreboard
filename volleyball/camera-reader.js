@@ -2,6 +2,16 @@
 const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','homeSets','awaySets'];
 let config={regions:{},reader:'segments',polarity:'dark',confidence:70,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-volleyball-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
+// One-time choice: the basketball segment decoder repeatedly mistakes this
+// gym's digits for 8. Start with independent text OCR, while keeping the
+// basketball-style seven-segment engine selectable for comparison.
+try{
+ if(!localStorage.getItem('htv-vb-reader-ocr-v1')){
+  config.reader='text';
+  localStorage.setItem('htv-volleyball-camera',JSON.stringify(config));
+  localStorage.setItem('htv-vb-reader-ocr-v1','1');
+ }
+}catch(e){}
 // This gym camera shows DARK numerals on a BRIGHT face. Earlier builds
 // defaulted to inverted polarity, causing hollow zeroes to be decoded as 8s.
 // Correct that old default once. Users can still switch polarity manually.
@@ -283,7 +293,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v9 · basketball digit decoder';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v10 · optical digit reading + basketball fallback';
 buttons();
 
 
