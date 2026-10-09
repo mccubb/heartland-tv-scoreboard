@@ -90,7 +90,9 @@ function readSevenSegment(image,key){
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
  if(ranked.length>1&&ranked[0].length<=ranked[1].length)return null;
  const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
- const best=votes.sort((a,b)=>b.confidence-a.confidence)[0];
+ let best=votes.sort((a,b)=>b.confidence-a.confidence)[0];
+ const eightVotes=readings.filter(v=>v.text==='8').length;
+ if(eightVotes>=3)best=readings.filter(v=>v.text==='8').sort((a,b)=>b.confidence-a.confidence)[0];
  const separated=readSeparatedDigits(image,key,prepared);
  if(separated&&separated.text.length===2){
   // Respect two independently recognized glyphs even if the original
@@ -206,7 +208,16 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
    const width=right-left+1;
    if(width/dh<.24){const upper=glyphY.some(y=>y<dh*.35),lower=glyphY.some(y=>y>dh*.65);if(upper&&lower)match={digit:1,quality:1,certainty:.9};continue}
    const coverage=regions.map(([x0,y0,x1,y1],j)=>{let on=0;const lo=left+x0*width,hi=left+x1*width;for(const n of rows[j])if(transformed[n]>=lo&&transformed[n]<hi)on++;return Math.min(1,on/Math.max(1,(x1-x0)*width*(y1-y0)*dh))});
-   const peak=Math.max(...coverage);if(peak<.2)continue;const bits=coverage.map(v=>v>Math.max(.14,peak*.37)?'1':'0').join('');
+   const peak=Math.max(...coverage);if(peak<.2)continue;
+   const allSevenStrong=coverage.every(v=>v>=Math.max(.09,peak*.23));
+   const middleStrong=coverage[6]>=Math.max(.13,peak*.32);
+   if(allSevenStrong&&middleStrong){
+    const certainty=Math.min(...coverage.map(v=>Math.min(1,v/Math.max(.001,peak*.58))));
+    const quality=1.18+certainty*.35-.03*Math.abs(shear);
+    if(!match||quality>match.quality)match={digit:8,quality,certainty};
+    continue;
+   }
+   const bits=coverage.map(v=>v>Math.max(.14,peak*.37)?'1':'0').join('');
    let digit=patterns.indexOf(bits);if(bits==='1011110')digit=6;if(bits==='1110010')digit=7;if(bits==='1110011')digit=9;if(digit<0)continue;
    const certainty=Math.min(...coverage.map((v,i)=>bits[i]==='1'?Math.min(1,v/(peak*.65)):Math.min(1,1-v/(peak*.37))));
    const on=coverage.filter((v,i)=>bits[i]==='1'),off=coverage.filter((v,i)=>bits[i]==='0');
@@ -348,7 +359,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.4 · independent digit separation';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.5 · stronger true-8 recognition';
 buttons();
 
 
