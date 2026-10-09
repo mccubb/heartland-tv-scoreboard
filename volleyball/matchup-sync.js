@@ -45,13 +45,8 @@ function setup(url){
      ready=true;status('Connected');
      remoteConfig=false;remoteDisplay=false;
      if(callbacks.role==='overlay')heartbeat();
-     if(callbacks.role==='controller'){
-      setTimeout(()=>{
-       if(!ready||socket!==ws)return;
-       if(!remoteConfig&&callbacks.snapshotConfig)broadcast('config',callbacks.snapshotConfig());
-       if(!remoteDisplay&&callbacks.snapshotDisplay)broadcast('display',callbacks.snapshotDisplay());
-      },2200);
-     }
+     // Do not auto-publish controller snapshots on reconnect/refresh.
+     // Retained room data must win until the user actually edits something.
     }else if(type===3){
      const topicLength=(bytes[ptr]<<8)|bytes[ptr+1],topic=dec.decode(bytes.slice(ptr+2,ptr+2+topicLength));
      let start=ptr+2+topicLength;
