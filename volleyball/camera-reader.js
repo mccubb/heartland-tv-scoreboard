@@ -31,13 +31,12 @@ function readSevenSegment(image,key){
  // solely because a bright reflection changed the crop's contrast.
  const prepared=segmentPixels(image);
  const limits=[80,110,145,185,220];
- // The left physical score display renders 0 with separated/slanted outer bars
- // that can look like two 1s after projection. Detect the complete hollow 0
- // shape before digit splitting. Requiring agreement at 3 exposure cutoffs
- // keeps this narrow and prevents ordinary 11/17 readings from being changed.
- if(key==='homeScore'){
+ // Volleyball's physical score and set displays use the same slanted hollow 0.
+ // Detect that complete hollow shape BEFORE normal digit decoding for every field.
+ // Require agreement at 3 exposure cutoffs, so a real 8 (middle bar lit) is not changed.
+ {
   let zeroVotes=0;for(const limit of limits)if(looksLikeSingleZero(prepared,image.width,image.height,limit))zeroVotes++;
-  if(zeroVotes>=3)return {value:0,text:'0',confidence:98,method:'Seven-segment · left zero lock'};
+  if(zeroVotes>=3)return {value:0,text:'0',confidence:98,method:'Seven-segment · zero lock'};
  }
  const readings=limits.map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
  if(!readings.length)return null;
@@ -77,7 +76,7 @@ function looksLikeSingleZero(prepared,w,h,limit){
  const sideBalance=Math.min(outer[1]+outer[2],outer[4]+outer[5])/Math.max(.001,Math.max(outer[1]+outer[2],outer[4]+outer[5]));
  const strong=outer.filter(v=>v>=.075).length;
  const avg=outer.reduce((a,v)=>a+v,0)/outer.length;
- return strong===6&&avg>=.11&&sideBalance>=.50&&middle<=Math.max(.11,avg*.58);
+ return strong>=5&&avg>=.095&&sideBalance>=.42&&middle<=Math.max(.105,avg*.50);
 }
 function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  const w=image.width,h=image.height,gray=prepared.gray,threshold=Math.min(prepared.threshold,limit);
@@ -325,7 +324,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v8 · steady clock + decimal digits';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.1 · basketball engine + zero protection';
 buttons();
 
 
