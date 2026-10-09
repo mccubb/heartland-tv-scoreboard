@@ -26,6 +26,23 @@ function disconnect(message='Camera disconnected.'){pause(message);if(stream)str
 async function engine(){if(worker)return worker;if(!window.Tesseract)throw Error('The reading engine did not load. Check your internet connection and reload this page.');if(!loading)loading=(async()=>{status('Loading reading engine for first use…');const w=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status?.includes('loading')||m.status?.includes('initializing'))status('Loading reading engine… '+Math.round((m.progress||0)*100)+'%')}});await w.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:Tesseract.PSM.SINGLE_LINE,user_defined_dpi:'150'});worker=w;return w})().catch(e=>{loading=null;throw e});return loading}
 function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||frame.width))),sh=Math.max(1,Math.round(r.h*(frame.videoHeight||frame.height))),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*(frame.videoWidth||frame.width),r.y*(frame.videoHeight||frame.height),sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
 // Read the seven lit bars directly instead of asking a text model to guess a font.
+function zeroInsteadOfEight(prepared,w,h,limit){
+ const threshold=Math.min(prepared.threshold,limit),gray=prepared.gray;
+ let left=w,right=-1,top=h,bottom=-1;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
+ if(right<left||bottom<top)return false;
+ const gw=right-left+1,gh=bottom-top+1;if(gh<12||gw/gh<.28||gw/gh>.95)return false;
+ const density=(x0,y0,x1,y1)=>{let on=0,total=0;const xa=Math.floor(left+x0*gw),xb=Math.ceil(left+x1*gw),ya=Math.floor(top+y0*gh),yb=Math.ceil(top+y1*gh);for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(gray[y*w+x]<=threshold)on++}return on/Math.max(1,total)};
+ // Only inspect the INNER horizontal bars. This deliberately avoids both
+ // vertical side bars, which made a real 0 look like an 8 in the old test.
+ const topBar=density(.28,.03,.72,.19);
+ const midBar=density(.30,.43,.70,.57);
+ const bottomBar=density(.28,.81,.72,.97);
+ const outer=Math.min(topBar,bottomBar);
+ // 0: strong top/bottom bars, weak/absent middle bar.
+ // 8: middle bar is comparable to the top/bottom bars.
+ return outer>=.055 && midBar<=Math.max(.045,outer*.52);
+}
 function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
@@ -44,7 +61,16 @@ function readSevenSegment(image,key){
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
  if(ranked.length>1&&ranked[0].length<=ranked[1].length)return null;
  const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
- return votes.sort((a,b)=>b.confidence-a.confidence)[0];
+ const best=votes.sort((a,b)=>b.confidence-a.confidence)[0];
+ // The gym's 0 has enough side-bar spill to sometimes decode as 8.
+ // Only when the normal decoder says exactly one digit "8", inspect the
+ // middle horizontal segment directly. If it is absent at multiple exposure
+ // cutoffs, this is a 0, not an 8.
+ if(best&&best.text==='8'){
+  let zeroVotes=0;for(const limit of limits)if(zeroInsteadOfEight(prepared,image.width,image.height,limit))zeroVotes++;
+  if(zeroVotes>=2)return {value:0,text:'0',confidence:99,method:'Seven-segment · 0/8 correction'};
+ }
+ return best;
 }
 function segmentPixels(image){
  const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
@@ -208,7 +234,7 @@ async function decodeSegments(image,key){
  const lane=false?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,looksLikeSingleZero,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,looksLikeSingleZero,zeroInsteadOfEight,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
@@ -324,7 +350,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.1 · basketball engine + zero protection';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.2 · basketball engine + 0/8 correction';
 buttons();
 
 
