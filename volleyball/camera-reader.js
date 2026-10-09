@@ -26,68 +26,17 @@ function disconnect(message='Camera disconnected.'){pause(message);if(stream)str
 async function engine(){if(worker)return worker;if(!window.Tesseract)throw Error('The reading engine did not load. Check your internet connection and reload this page.');if(!loading)loading=(async()=>{status('Loading reading engine for first use…');const w=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status?.includes('loading')||m.status?.includes('initializing'))status('Loading reading engine… '+Math.round((m.progress||0)*100)+'%')}});await w.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:Tesseract.PSM.SINGLE_LINE,user_defined_dpi:'150'});worker=w;return w})().catch(e=>{loading=null;throw e});return loading}
 function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||frame.width))),sh=Math.max(1,Math.round(r.h*(frame.videoHeight||frame.height))),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*(frame.videoWidth||frame.width),r.y*(frame.videoHeight||frame.height),sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
 // Read the seven lit bars directly instead of asking a text model to guess a font.
-function zeroByCenterProfile(prepared,w,h){
- const gray=prepared.gray;
- // Find the digit from pixels substantially darker than the crop background.
- // This deliberately does not depend on Otsu's exact cutoff.
- let min=255,max=0;for(const v of gray){min=Math.min(min,v);max=Math.max(max,v)}
- const threshold=min+(max-min)*.42;
- let left=w,right=-1,top=h,bottom=-1;
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
- if(right<left||bottom<top)return false;
- const gw=right-left+1,gh=bottom-top+1;if(gh<12||gw/gh<.25||gw/gh>1.05)return false;
- const rowDark=(fy0,fy1,x0=.30,x1=.70)=>{let on=0,total=0;const ya=Math.floor(top+fy0*gh),yb=Math.ceil(top+fy1*gh),xa=Math.floor(left+x0*gw),xb=Math.ceil(left+x1*gw);for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(gray[y*w+x]<=threshold)on++}return on/Math.max(1,total)};
- // For this gym display, a true 0 has strong top/bottom horizontal bars and
- // a bright/open center. A true 8 has a real horizontal bar through the center.
- const topBar=rowDark(.04,.20),midBar=rowDark(.43,.57),bottomBar=rowDark(.80,.96);
- const outer=(topBar+bottomBar)/2;
- return outer>=.045 && midBar<=Math.max(.035,outer*.38);
-}
-function zeroInsteadOfEight(prepared,w,h,limit){
- const threshold=Math.min(prepared.threshold,limit),gray=prepared.gray;
- let left=w,right=-1,top=h,bottom=-1;
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
- if(right<left||bottom<top)return false;
- const gw=right-left+1,gh=bottom-top+1;if(gh<12||gw/gh<.28||gw/gh>.95)return false;
- const density=(x0,y0,x1,y1)=>{let on=0,total=0;const xa=Math.floor(left+x0*gw),xb=Math.ceil(left+x1*gw),ya=Math.floor(top+y0*gh),yb=Math.ceil(top+y1*gh);for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(gray[y*w+x]<=threshold)on++}return on/Math.max(1,total)};
- // Only inspect the INNER horizontal bars. This deliberately avoids both
- // vertical side bars, which made a real 0 look like an 8 in the old test.
- const topBar=density(.28,.03,.72,.19);
- const midBar=density(.30,.43,.70,.57);
- const bottomBar=density(.28,.81,.72,.97);
- const outer=Math.min(topBar,bottomBar);
- // 0: strong top/bottom bars, weak/absent middle bar.
- // 8: middle bar is comparable to the top/bottom bars.
- return outer>=.055 && midBar<=Math.max(.045,outer*.52);
-}
 function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
  const prepared=segmentPixels(image);
- const limits=[80,110,145,185,220];
- // Volleyball's physical score and set displays use the same slanted hollow 0.
- // Detect that complete hollow shape BEFORE normal digit decoding for every field.
- // Require agreement at 3 exposure cutoffs, so a real 8 (middle bar lit) is not changed.
- {
-  let zeroVotes=0;for(const limit of limits)if(looksLikeSingleZero(prepared,image.width,image.height,limit))zeroVotes++;
-  if(zeroVotes>=3)return {value:0,text:'0',confidence:98,method:'Seven-segment · zero lock'};
- }
- const readings=limits.map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
+ const readings=[80,110,145,185,220].map(limit=>readSevenSegmentPass(image,key,limit,prepared)).filter(Boolean);
  if(!readings.length)return null;
  const groups=new Map();for(const r of readings){const g=groups.get(r.text)||[];g.push(r);groups.set(r.text,g)}
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
  if(ranked.length>1&&ranked[0].length<=ranked[1].length)return null;
  const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
- const best=votes.sort((a,b)=>b.confidence-a.confidence)[0];
- // The gym's 0 has enough side-bar spill to sometimes decode as 8.
- // Only when the normal decoder says exactly one digit "8", inspect the
- // middle horizontal segment directly. If it is absent at multiple exposure
- // cutoffs, this is a 0, not an 8.
- if(best&&best.text==='8'){
-  let zeroVotes=0;for(const limit of limits)if(zeroInsteadOfEight(prepared,image.width,image.height,limit))zeroVotes++;
-  if(zeroByCenterProfile(prepared,image.width,image.height)||zeroVotes>=2)return {value:0,text:'0',confidence:99,method:'Seven-segment · hollow-zero correction'};
- }
- return best;
+ return votes.sort((a,b)=>b.confidence-a.confidence)[0];
 }
 function segmentPixels(image){
  const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
@@ -97,29 +46,6 @@ function segmentPixels(image){
  for(let i=0;i<255;i++){count+=hist[i];left+=i*hist[i];if(!count||count===gray.length)continue;const delta=left/count-(sum-left)/(gray.length-count),variance=count*(gray.length-count)*delta*delta;if(variance>best){best=variance;threshold=i}}
  // Crops are contrast-normalized. Do not count mid-gray screen shadows as bars.
  return {gray,threshold};
-}
-function looksLikeSingleZero(prepared,w,h,limit){
- const threshold=Math.min(prepared.threshold,limit),gray=prepared.gray;
- let left=w,right=-1,top=h,bottom=-1,count=0;
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(gray[y*w+x]<=threshold){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);count++}
- if(right<left||bottom<top)return false;
- const gw=right-left+1,gh=bottom-top+1,ratio=gw/gh;
- if(gh<12||ratio<.28||ratio>.95||count<gh*1.1)return false;
- const density=(x0,y0,x1,y1)=>{let on=0,total=0;const xa=Math.floor(left+x0*gw),xb=Math.ceil(left+x1*gw),ya=Math.floor(top+y0*gh),yb=Math.ceil(top+y1*gh);for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(gray[y*w+x]<=threshold)on++}return on/Math.max(1,total)};
- // Broad regions tolerate the slant/perspective of the physical left display.
- const outer=[
-  density(.18,0,.82,.24),      // top
-  density(.62,.12,1,.50),      // upper right
-  density(.62,.50,1,.88),      // lower right
-  density(.18,.76,.82,1),      // bottom
-  density(0,.50,.38,.88),      // lower left
-  density(0,.12,.38,.50)       // upper left
- ];
- const middle=density(.24,.39,.76,.61);
- const sideBalance=Math.min(outer[1]+outer[2],outer[4]+outer[5])/Math.max(.001,Math.max(outer[1]+outer[2],outer[4]+outer[5]));
- const strong=outer.filter(v=>v>=.075).length;
- const avg=outer.reduce((a,v)=>a+v,0)/outer.length;
- return strong>=5&&avg>=.095&&sideBalance>=.42&&middle<=Math.max(.105,avg*.50);
 }
 function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  const w=image.width,h=image.height,gray=prepared.gray,threshold=Math.min(prepared.threshold,limit);
@@ -158,23 +84,6 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  }
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
- // Special single-zero guard. On some physical seven-segment boards the six
- // outer bars of 0 are separated enough that projection grouping can split
- // one "0" into a false "17". Before grouping digits, test the entire crop as
- // one glyph. Only accept 0 when all six outer segments are strong and the
- // middle segment is clearly off; this does not match a real 17.
- {
-  let left=w,right=-1;for(let y=top;y<=bottom;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){left=Math.min(left,x);right=Math.max(right,x)}
-  const gw=right-left+1,gh=height;
-  if(gw>gh*.34&&gw<gh*.95){
-   const zregs=[[.22,0,.78,.17],[.7,.16,1,.43],[.7,.57,1,.86],[.22,.84,.78,1],[0,.57,.3,.86],[0,.16,.3,.43],[.22,.42,.78,.59]];
-   const cov=zregs.map(([x0,y0,x1,y1])=>{let on=0,total=0;for(let y=Math.floor(top+y0*gh);y<Math.ceil(top+y1*gh);y++)for(let x=Math.floor(left+x0*gw);x<Math.ceil(left+x1*gw);x++){if(x<0||x>=w||y<0||y>=h)continue;total++;if(ink[y*w+x])on++}return on/Math.max(1,total)});
-   const outer=Math.min(...cov.slice(0,6)),middle=cov[6],peak=Math.max(...cov.slice(0,6));
-   if(outer>=Math.max(.10,peak*.24)&&middle<=Math.max(.12,peak*.28)){
-    const value=parseReading(key,'0');if(value!==null)return {value,text:'0',confidence:96,method:'Seven-segment · zero guard'};
-   }
-  }
- }
  let runs=[];let start=-1,gap=0;const maxGap=false?1:Math.max(1,Math.round(height*.035));
  for(let x=0;x<=w+maxGap;x++){if(x<w&&cols[x]>0){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){runs.push({left:start,right:x-gap});start=-1}}
  // Tight, leaning digits can overlap in the column projection. Keep their
@@ -251,7 +160,7 @@ async function decodeSegments(image,key){
  const lane=false?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,looksLikeSingleZero,zeroByCenterProfile,zeroInsteadOfEight,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
@@ -320,7 +229,7 @@ function stable(key,value,time){
  const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
  candidates[key]={value,time,count,history};return count>=2;
 }
-function readState(){try{return {homeScore:0,awayScore:0,homeSets:0,awaySets:0,...JSON.parse(localStorage.getItem('htv-volleyball-college-v2-score')||localStorage.getItem('htv-volleyball-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,homeSets:0,awaySets:0}}}
+function readState(){try{return {homeScore:0,awayScore:0,homeSets:0,awaySets:0,...JSON.parse(localStorage.getItem('htv-volleyball-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,homeSets:0,awaySets:0}}}
 function apply(result,automatic){
  const state=readState(),time=Date.now();
  
@@ -338,7 +247,7 @@ function apply(result,automatic){
   if(false&&state.running){state.running=false;changed=true}
  }
  // Unchanged samples need no storage write or overlay redraw.
- if(changed){state.stamp=time;localStorage.setItem('htv-volleyball-college-v2-score',JSON.stringify(state));localStorage.setItem('htv-volleyball-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
+ if(changed){state.stamp=time;localStorage.setItem('htv-volleyball-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
  for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
  return changed;
 }
@@ -367,7 +276,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.3 · basketball engine + hollow-zero fix';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8 restored · basketball stability build';
 buttons();
 
 
