@@ -33,53 +33,6 @@ function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||fra
 // Independent column check: do not collapse two visible seven-segment
 // digits (for example 19) into an apparently confident single 8.
 // Evaluate isolated left and right glyphs before accepting a one-digit result.
-function readSeparatedDigits(image,key,prepared){
- if(key.endsWith('Sets'))return null;
- const w=image.width,h=image.height,g=prepared.gray;
- const cutoff=Math.min(prepared.threshold,145);
- const counts=new Int32Array(w);let minX=w,maxX=-1,minY=h,maxY=-1;
- for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(g[y*w+x]<=cutoff){
-  counts[x]++;if(x<minX)minX=x;if(x>maxX)maxX=x;
-  if(y<minY)minY=y;if(y>maxY)maxY=y;
- }
- if(maxX<minX||maxY<minY)return null;
- const width=maxX-minX+1,height=maxY-minY+1;
- // A single ordinary digit is narrower than its height. 19, 17 and 20
- // on our gym board can be wider than one character but touch diagonally.
- if(width<height*.76)return null;
- const a=Math.floor(minX+width*.24),b=Math.ceil(minX+width*.76);
- let cut=-1,best=Infinity;
- for(let x=a;x<=b;x++){
-  // Prefer an actual clear column, but allow a small overlapping seam.
-  const cost=counts[x]+.015*Math.abs(x-(minX+maxX)/2);
-  if(cost<best){best=cost;cut=x}
- }
- if(cut<0)return null;
- const leftInk=counts.slice(minX,cut+1).reduce((x,y)=>x+y,0);
- const rightInk=counts.slice(cut+1,maxX+1).reduce((x,y)=>x+y,0);
- const total=leftInk+rightInk;
- if(leftInk<total*.085||rightInk<total*.085||best>height*.22)return null;
- const decodePart=(x0,x1)=>{
-  const width=x1-x0+1,pixels=new Uint8ClampedArray(width*h*4);
-  for(let y=0;y<h;y++)for(let x=0;x<width;x++){
-   const gray=g[y*w+(x+x0)],i=(y*width+x)*4;
-   pixels[i]=pixels[i+1]=pixels[i+2]=gray;pixels[i+3]=255;
-  }
-  const part={width,height:h,getContext:()=>({getImageData:()=>({data:pixels})})};
-  const prep=segmentPixels(part);
-  const readings=[80,110,145,185,220].map(t=>readSevenSegmentPass(part,key,t,prep))
-   .filter(v=>v&&v.text.length===1);
-  const freq=new Map();
-  for(const v of readings)freq.set(v.text,(freq.get(v.text)||0)+1);
-  const ranked=[...freq].sort((a,b)=>b[1]-a[1]);
-  if(!ranked.length||ranked[0][1]<3||(ranked[1]&&ranked[1][1]===ranked[0][1]))return null;
-  return ranked[0][0];
- };
- const left=decodePart(minX,cut),right=decodePart(cut+1,maxX);
- if(left===null||right===null)return null;
- const value=parseReading(key,left+right);
- return value===null?null:{value,text:left+right,confidence:92,method:'Seven-segment · separate digits'};
-}
 function readSevenSegment(image,key){
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
@@ -90,27 +43,7 @@ function readSevenSegment(image,key){
  const ranked=[...groups.values()].sort((a,b)=>b.length-a.length);
  if(ranked.length>1&&ranked[0].length<=ranked[1].length)return null;
  const votes=ranked[0];if(ranked.length>1&&votes.length<3)return null;
- let best=votes.sort((a,b)=>b.confidence-a.confidence)[0];
- const eightVotes=readings.filter(v=>v.text==='8').length;
- if(eightVotes>=3)best=readings.filter(v=>v.text==='8').sort((a,b)=>b.confidence-a.confidence)[0];
- const separated=readSeparatedDigits(image,key,prepared);
- if(separated&&separated.text.length===2){
-  // Respect two independently recognized glyphs even if the original
-  // overlapping projection happened to mistake the pair for one 8.
-  if(best.text.length===1)return separated;
-  if(best.text!==separated.text)return null;
- }
- // Never post a lone 8 from a crop containing an unresolved, clearly
- // two-character-wide display; hold the last correct score instead.
- if(best.text==='8'&&!key.endsWith('Sets')){
-  const g=prepared.gray,w=image.width,h=image.height,t=Math.min(prepared.threshold,145);
-  let l=w,r=-1,top=h,bottom=-1;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(g[y*w+x]<=t){
-   l=Math.min(l,x);r=Math.max(r,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
-  }
-  if(r>=l&&bottom>=top&&(r-l+1)/(bottom-top+1)>.92)return null;
- }
- return best;
+ return votes.sort((a,b)=>b.confidence-a.confidence)[0];
 }
 function segmentPixels(image){
  const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
@@ -137,10 +70,10 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  for(const c of components)if((c.t<=16||c.b>=h-17)&&c.r-c.l+1>height*.55&&c.b-c.t+1<height*.15)for(const n of c.points)ink[n]=0;
  top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
  let colonX=null,decimalX=null,decimalY=null;
- if(false){const dots=components.filter(c=>c.b-c.t+1<height*.24&&c.r-c.l+1<height*.25&&c.points.length>=height*.3);
+ if(key==='seconds'){const dots=components.filter(c=>c.b-c.t+1<height*.24&&c.r-c.l+1<height*.25&&c.points.length>=height*.3);
   for(const a of dots)for(const b of dots)if(a!==b&&Math.abs((a.l+a.r-b.l-b.r)/2)<height*.18&&b.t-a.b>height*.15&&b.t-a.b<height*.65){colonX=(a.l+a.r+b.l+b.r)/4;for(const n of [...a.points,...b.points])ink[n]=0}
  }
- if(false&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.001);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;decimalY=(dots[0].t+dots[0].b)/2;for(const n of dots[0].points)ink[n]=0}}
+ if(key==='seconds'&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.001);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;decimalY=(dots[0].t+dots[0].b)/2;for(const n of dots[0].points)ink[n]=0}}
  // Tenths are outside the whole-seconds number. Remove them before grouping,
  // so their bars cannot change its height, lean, or digit boundaries.
  if(decimalX!==null){
@@ -158,7 +91,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  }
  for(const c of components)if(c.points.length<height*height*.012)for(const n of c.points)ink[n]=0;
  cols.fill(0);top=h;bottom=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){cols[x]++;top=Math.min(top,y);bottom=Math.max(bottom,y)}height=bottom-top+1;if(height<12)return null;
- let runs=[];let start=-1,gap=0;const maxGap=false?1:Math.max(1,Math.round(height*.035));
+ let runs=[];let start=-1,gap=0;const maxGap=key==='seconds'?1:Math.max(1,Math.round(height*.035));
  for(let x=0;x<=w+maxGap;x++){if(x<w&&cols[x]>0){if(start<0)start=x;gap=0}else if(start>=0&&++gap>maxGap){runs.push({left:start,right:x-gap});start=-1}}
  // Tight, leaning digits can overlap in the column projection. Keep their
  // separate connected shapes instead of merging "20" or "10" into one digit.
@@ -169,12 +102,12 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
   // LED bars can be separate islands. Estimate their common lean before
   // grouping columns, so the bottom of one digit cannot overlap the next.
   const slopes=[];
-  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dw/dh>(false?.85:.55))continue;const points=c.points.filter(n=>ink[n]);if(points.length<height*.3)continue;let sx=0,sy=0;for(const n of points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/points.length,my=sy/points.length;let cov=0,variance=0;for(const n of points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope)}
+  for(const c of components){const dh=c.b-c.t+1,dw=c.r-c.l+1;if(dh<height*.2||dw/dh>(key==='seconds'?.85:.55))continue;const points=c.points.filter(n=>ink[n]);if(points.length<height*.3)continue;let sx=0,sy=0;for(const n of points){sx+=n%w;sy+=Math.floor(n/w)}const mx=sx/points.length,my=sy/points.length;let cov=0,variance=0;for(const n of points){const dy=Math.floor(n/w)-my;cov+=dy*(n%w-mx);variance+=dy*dy}const slope=cov/Math.max(1,variance);if(Math.abs(slope)<.4)slopes.push(slope)}
   if(slopes.length>=2){slopes.sort((a,b)=>a-b);const lean=slopes[Math.floor(slopes.length/2)],margin=Math.ceil(Math.abs(lean)*height)+3,projection=new Array(w+margin*2).fill(0),points=[];
    for(let y=top;y<=bottom;y++)for(let x=0;x<w;x++)if(ink[y*w+x]){const column=Math.round(x-lean*(y-top)+margin);projection[column]++;points.push({n:y*w+x,column})}
    // Clear tiny valleys and their antialias fringe together. This keeps
    // a real two-pixel digit gap from shrinking into a one-pixel bridge.
-   if(false){
+   if(key==='seconds'){
     const peak=Math.max(...projection);let a=0;
     while(a<projection.length){if(projection[a]>peak*.32){a++;continue}let b=a,min=Infinity;
      while(b<projection.length&&projection[b]<=peak*.32){min=Math.min(min,projection[b]);b++}
@@ -192,7 +125,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  let text='',confidence=100,digits=0,colons=0;
  for(const run of runs){if(decimalX!==null&&run.left>decimalX)break;const pixel=(x,y)=>run.points?run.points.has(y*w+x):ink[y*w+x];if(colonX!==null&&run.left>colonX&&!colons){text+=':';colons++}let yt=h,yb=-1,area=0;for(let y=top;y<=bottom;y++)for(let x=run.left;x<=run.right;x++)if(pixel(x,y)){yt=Math.min(yt,y);yb=Math.max(yb,y);area++}
   const dh=yb-yt+1,dw=run.right-run.left+1;if(area<height*.04)continue;
-  if(dh<height*.72){if(false&&dh>height*.18&&dw<height*.3){text+=':';colons++;continue}return null}
+  if(dh<height*.72){if(key==='seconds'&&dh>height*.18&&dw<height*.3){text+=':';colons++;continue}return null}
   if(dw/dh<.24){text+='1';digits++;confidence=Math.min(confidence,92);continue}
   if(dw/dh>1.05)return null;
   let match=null;const glyphX=[],glyphY=[],rows=regions.map(()=>[]);
@@ -208,16 +141,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
    const width=right-left+1;
    if(width/dh<.24){const upper=glyphY.some(y=>y<dh*.35),lower=glyphY.some(y=>y>dh*.65);if(upper&&lower)match={digit:1,quality:1,certainty:.9};continue}
    const coverage=regions.map(([x0,y0,x1,y1],j)=>{let on=0;const lo=left+x0*width,hi=left+x1*width;for(const n of rows[j])if(transformed[n]>=lo&&transformed[n]<hi)on++;return Math.min(1,on/Math.max(1,(x1-x0)*width*(y1-y0)*dh))});
-   const peak=Math.max(...coverage);if(peak<.2)continue;
-   const allSevenStrong=coverage.every(v=>v>=Math.max(.09,peak*.23));
-   const middleStrong=coverage[6]>=Math.max(.13,peak*.32);
-   if(allSevenStrong&&middleStrong){
-    const certainty=Math.min(...coverage.map(v=>Math.min(1,v/Math.max(.001,peak*.58))));
-    const quality=1.18+certainty*.35-.03*Math.abs(shear);
-    if(!match||quality>match.quality)match={digit:8,quality,certainty};
-    continue;
-   }
-   const bits=coverage.map(v=>v>Math.max(.14,peak*.37)?'1':'0').join('');
+   const peak=Math.max(...coverage);if(peak<.2)continue;const bits=coverage.map(v=>v>Math.max(.14,peak*.37)?'1':'0').join('');
    let digit=patterns.indexOf(bits);if(bits==='1011110')digit=6;if(bits==='1110010')digit=7;if(bits==='1110011')digit=9;if(digit<0)continue;
    const certainty=Math.min(...coverage.map((v,i)=>bits[i]==='1'?Math.min(1,v/(peak*.65)):Math.min(1,1-v/(peak*.37))));
    const on=coverage.filter((v,i)=>bits[i]==='1'),off=coverage.filter((v,i)=>bits[i]==='0');
@@ -227,7 +151,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
   if(!match)return null;
   confidence=Math.min(confidence,80+Math.max(0,match.certainty)*18);text+=match.digit;digits++;
  }
- if(false?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
+ if(key==='seconds'?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
  const value=parseReading(key,text);return value===null?null:{value,text,confidence,method:decimalX!==null?'Seven-segment · whole seconds':'Seven-segment'};
 }
 
@@ -243,7 +167,7 @@ async function decodeSegments(image,key){
  const lane=false?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSeparatedDigits,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
@@ -359,7 +283,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v8.5 · stronger true-8 recognition';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v9 · basketball digit decoder';
 buttons();
 
 
