@@ -190,42 +190,6 @@ async function decodeSegments(image,key){
 // Independent 0/1/8 safety check. Count enclosed light holes inside the
 // actual dark numeral: 8 has two, 0 has one, 1 has none. If the image is
 // ambiguous, hold the last score instead of confidently publishing an 8.
-function validateEightShape(image,key,reading){
- if(!reading||reading.value!==8||reading.text.trim()!=='8')return reading;
- const w=image.width,h=image.height,p=image.getContext('2d').getImageData(0,0,w,h).data;
- // Ignore the white padding surrounding the crop, and derive ink threshold
- // from only the central image. This is independent of Tesseract's output.
- const gray=new Uint8Array(w*h),hist=new Uint32Array(256);
- for(let i=0;i<gray.length;i++){const n=i*4,g=Math.round((p[n]+p[n+1]+p[n+2])/3);gray[i]=g;hist[g]++}
- let count=0,sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
- let acc=0,weighted=0,best=-1,threshold=120;
- for(let k=0;k<255;k++){count+=hist[k];weighted+=k*hist[k];if(count<20||count>=gray.length-20)continue;const delta=weighted/count-(sum-weighted)/(gray.length-count),score=count*(gray.length-count)*delta*delta;if(score>best){best=score;threshold=k}}
- threshold=Math.min(165,threshold);
- let l=w,r=-1,t=h,b=-1;const ink=new Uint8Array(w*h);
- for(let y=0;y<h;y++)for(let x=0;x<w;x++){const n=y*w+x;if(gray[n]<threshold){ink[n]=1;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y)}}
- if(r<l||b<t)return null;
- const gw=r-l+1,gh=b-t+1;
- // A crop with room for two characters must not become one '8'.
- if(gw/gh>1.08)return null;
- // If the entire shape is a thin stroke, it is more likely 1 than 8.
- if(gw/gh<.24)return {value:1,text:'1',confidence:88,method:'Thin one correction'};
- const seen=new Uint8Array(w*h),holes=[];
- for(let y=t;y<=b;y++)for(let x=l;x<=r;x++){
-  const start=y*w+x;if(ink[start]||seen[start])continue;
-  let q=[start],head=0,area=0,touches=false,minX=w,maxX=0,minY=h,maxY=0;seen[start]=1;
-  while(head<q.length){const n=q[head++],xx=n%w,yy=(n/w)|0;area++;minX=Math.min(minX,xx);maxX=Math.max(maxX,xx);minY=Math.min(minY,yy);maxY=Math.max(maxY,yy);
-   if(xx===l||xx===r||yy===t||yy===b)touches=true;
-   for(const v of [xx>l?n-1:-1,xx<r?n+1:-1,yy>t?n-w:-1,yy<b?n+w:-1])if(v>=0&&!ink[v]&&!seen[v]){seen[v]=1;q.push(v)}
-  }
-  if(!touches&&area>=gw*gh*.012)holes.push({area,y:(minY+maxY)/2});
- }
- holes.sort((x,y)=>x.y-y.y);
- if(holes.length===1&&holes[0].area>=gw*gh*.028)
-  return {value:0,text:'0',confidence:93,method:'Hollow 0 correction'};
- if(holes.length===2&&holes[1].y-holes[0].y>=gh*.17)return reading;
- // Never assert an 8 if the necessary two holes aren't visible.
- return null;
-}
 async function scan(onField,fields=activeKeys()){
  const token=generation;
  if(!ready())throw Error('Connect a camera and mark all four volleyball areas first.');
@@ -245,7 +209,6 @@ async function scan(onField,fields=activeKeys()){
   const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
   if(config.reader==='segments')reading=await decodeSegments(image,key);
   else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
-  reading=validateEightShape(image,key,reading);
   const confidence=reading?.confidence||0;result[key]={sampledAt,value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
   const accepted=confirmed[key],observed=result[key].value;
   if(observed!==null)byId(key+'Value').textContent=format(key,observed);
@@ -328,12 +291,31 @@ async function start(){
  }catch(e){if(token===generation)pause('Updates paused: '+e.message)}
  finally{busy=false;buttons()}
 }
+// Save the exact camera crops for real-world decoder testing.
+async function downloadReadingSamples(){
+ if(!ready()){status('Connect the camera and mark all four reading boxes first.');return}
+ const names={homeScore:'LEFT POINTS',awayScore:'RIGHT POINTS',homeSets:'LEFT SETS',awaySets:'RIGHT SETS'};
+ const items=keys.map(key=>({key,img:crop(video,config.regions[key])}));
+ const width=840,row=230,canvas=document.createElement('canvas');canvas.width=width;canvas.height=row*items.length+60;
+ const g=canvas.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,canvas.width,canvas.height);
+ g.fillStyle='#111';g.font='bold 20px Arial';g.fillText('Heartland TV — exact camera number crops',18,32);
+ items.forEach(({key,img},i)=>{const y=i*row+60;
+  g.fillStyle='#111';g.font='bold 18px Arial';g.fillText(names[key],20,y+30);
+  const scale=Math.min(2.5,780/img.width,170/img.height),w=img.width*scale,h=img.height*scale;
+  g.drawImage(img,20,y+45,w,h);
+  g.font='14px Arial';g.fillText('Crop pixels '+img.width+' x '+img.height,610,y+30);
+ });
+ const link=document.createElement('a');link.href=canvas.toDataURL('image/png');link.download='HeartlandTV-digit-crops.png';
+ document.body.appendChild(link);link.click();link.remove();
+ status('Saved the four actual digit crops. Send that PNG here so I can test the decoder against the real pixels.');
+}
+byId('downloadSamples').onclick=downloadReadingSamples;
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v11 · 8/0/1 shape validation';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v12 · readings restored + camera sample capture';
 buttons();
 
 
