@@ -2,16 +2,9 @@
 const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','homeSets','awaySets'];
 let config={regions:{},reader:'segments',polarity:'dark',confidence:70,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-volleyball-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
-// One-time choice: the basketball segment decoder repeatedly mistakes this
-// gym's digits for 8. Start with independent text OCR, while keeping the
-// basketball-style seven-segment engine selectable for comparison.
-try{
- if(!localStorage.getItem('htv-vb-reader-ocr-v1')){
-  config.reader='text';
-  localStorage.setItem('htv-volleyball-camera',JSON.stringify(config));
-  localStorage.setItem('htv-vb-reader-ocr-v1','1');
- }
-}catch(e){}
+config.reader='segments';
+try{localStorage.setItem('htv-volleyball-camera',JSON.stringify(config))}catch(e){}
+
 // This gym camera shows DARK numerals on a BRIGHT face. Earlier builds
 // defaulted to inverted polarity, causing hollow zeroes to be decoded as 8s.
 // Correct that old default once. Users can still switch polarity manually.
@@ -291,31 +284,12 @@ async function start(){
  }catch(e){if(token===generation)pause('Updates paused: '+e.message)}
  finally{busy=false;buttons()}
 }
-// Save the exact camera crops for real-world decoder testing.
-async function downloadReadingSamples(){
- if(!ready()){status('Connect the camera and mark all four reading boxes first.');return}
- const names={homeScore:'LEFT POINTS',awayScore:'RIGHT POINTS',homeSets:'LEFT SETS',awaySets:'RIGHT SETS'};
- const items=keys.map(key=>({key,img:crop(video,config.regions[key])}));
- const width=840,row=230,canvas=document.createElement('canvas');canvas.width=width;canvas.height=row*items.length+60;
- const g=canvas.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,canvas.width,canvas.height);
- g.fillStyle='#111';g.font='bold 20px Arial';g.fillText('Heartland TV — exact camera number crops',18,32);
- items.forEach(({key,img},i)=>{const y=i*row+60;
-  g.fillStyle='#111';g.font='bold 18px Arial';g.fillText(names[key],20,y+30);
-  const scale=Math.min(2.5,780/img.width,170/img.height),w=img.width*scale,h=img.height*scale;
-  g.drawImage(img,20,y+45,w,h);
-  g.font='14px Arial';g.fillText('Crop pixels '+img.width+' x '+img.height,610,y+30);
- });
- const link=document.createElement('a');link.href=canvas.toDataURL('image/png');link.download='HeartlandTV-digit-crops.png';
- document.body.appendChild(link);link.click();link.remove();
- status('Saved the four actual digit crops. Send that PNG here so I can test the decoder against the real pixels.');
-}
-byId('downloadSamples').onclick=downloadReadingSamples;
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
 for(const key of ['reader','polarity','confidence']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v12 · readings restored + camera sample capture';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Volleyball Reader v13 · exact basketball number engine';
 buttons();
 
 
