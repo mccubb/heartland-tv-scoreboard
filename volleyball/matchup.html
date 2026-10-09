@@ -176,7 +176,7 @@ body.controller #stage{width:100%;height:auto;aspect-ratio:16/9}
 <div class="card"><h2>Right team</h2><label>School / small text<input id="rightSmallInput"></label><label>Team name<input id="rightNameInput"></label><label>Accent color<input type="color" id="rightColorInput"></label><label>Team logo<input type="file" accept="image/png,image/jpeg,image/webp" id="rightFile"></label><label>Logo scale: <strong class="scale-value" id="rightScaleValue">0</strong> / 100<input type="range" id="rightScaleInput" min="0" max="100" step="1" value="0"></label><div class="row"><label>Logo left/right (%)<input id="rightLogoXInput" type="number" min="-50" max="50" step="1"></label><label>Logo up/down (%)<input id="rightLogoYInput" type="number" min="-50" max="50" step="1"></label></div><label>Logo rotation (degrees)<input id="rightLogoRotateInput" type="number" min="-45" max="45" step="1"></label><button class="gray" id="rightLogoReset">Reset logo position</button><button class="gray" id="rightRemove">Clear uploaded logo</button></div>
 <div class="card wide"><h2>Layout</h2><label>Bottom caption<input id="footerInput"></label><div class="row"><label>Banner width (%)<input id="widthInput" type="number" min="55" max="98"></label><label>Banner height (%)<input id="heightInput" type="number" min="17" max="48"></label><label>Vertical position (%)<input id="topInput" type="number" min="20" max="80"></label></div></div>
 </div></div>
-<script src="./logo.js?v=25"></script><script src="./matchup-eagle.js?v=25"></script><script src="./matchup-sync.js?v=25"></script>
+<script src="./logo.js?v=26"></script><script src="./matchup-eagle.js?v=26"></script><script src="./matchup-sync.js?v=26"></script>
 <script>
 (function(){
 'use strict';
@@ -191,7 +191,7 @@ function pack(value){const bytes=new TextEncoder().encode(JSON.stringify(value))
 function unpack(value){const b=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(b+'='.repeat((4-b.length%4)%4));return JSON.parse(new TextDecoder().decode(Uint8Array.from(binary,c=>c.charCodeAt(0))))}
 function validRoom(value){return /^[a-zA-Z0-9_-]{12,80}$/.test(value)}
 function makeRoom(){const a=new Uint8Array(16);crypto.getRandomValues(a);return Array.from(a,v=>v.toString(16).padStart(2,'0')).join('')}
-function shareUrl(isControl){const url=new URL(location.href);url.search='';url.searchParams.set('v','25');if(isControl)url.searchParams.set('control','1');url.searchParams.set('room',activeRoom);url.hash='cfg='+pack(config());return url.href}
+function shareUrl(isControl){const url=new URL(location.href);url.search='';url.searchParams.set('v','26');if(isControl)url.searchParams.set('control','1');url.searchParams.set('room',activeRoom);url.hash='cfg='+pack(config());return url.href}
 function refreshShareLinks(){if(!controller||!activeRoom)return;$('shareLinks').hidden=false;$('shareControlLink').value=shareUrl(true);$('shareOverlayLink').value=shareUrl(false)}
 let activeRoom=validRoom(sharedRoom)?sharedRoom:'';
 
