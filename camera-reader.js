@@ -247,7 +247,7 @@ function apply(result,automatic){
   if(key==='seconds'&&state.running){state.running=false;changed=true}
  }
  // Unchanged samples need no storage write or overlay redraw.
- if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));status('Updated overlay at '+new Date().toLocaleTimeString())}
+ if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));window.htvSync?.publishScore();status('Updated overlay at '+new Date().toLocaleTimeString())}
  for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
  return changed;
 }
