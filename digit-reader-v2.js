@@ -1,84 +1,114 @@
-// Heartland TV seven-segment reader, verified against photographed 22 / 0 / 1:39 samples.
-// This supplements the original reader; its existing engine remains as fallback.
-// Uses five exposure cutoffs and only accepts strong multi-cutoff agreement.
-function readSevenSegmentFast(image, key) {
-  if (!['homeScore','awayScore','seconds','period'].includes(key)) return null;
-  const w=image.width, h=image.height;
-  if(w<8||h<12)return null;
-  const prepared=segmentPixels(image),gray=prepared.gray;
-  const patterns=['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000','1111111','1111011'];
-  const regions=[[.22,0,.78,.17],[.70,.16,1,.43],[.70,.57,1,.86],[.22,.84,.78,1],[0,.57,.30,.86],[0,.16,.30,.43],[.22,.42,.78,.59]];
-  const votes=new Map();
-  for (const threshold of [65,80,95,110,125]) {
-    const ink=new Uint8Array(w*h),cols=new Uint16Array(w);
-    for(let i=0;i<ink.length;i++)if(gray[i]<threshold){ink[i]=1;cols[i%w]++}
-    const runs=[];let start=-1,gap=0;
-    for(let x=0;x<=w+1;x++){
-      if(x<w&&cols[x]>=Math.max(2,Math.floor(h*.035))){
-        if(start<0)start=x;gap=0;
-      }else if(start>=0&&++gap>1){
-        runs.push({left:start,right:x-gap+1});start=-1;
-      }
-    }
-    if(!runs.length||runs.length>7)continue;
-    const glyphs=[];let maxH=0,globalTop=h;
-    for(const run of runs){
-      let top=h,bottom=-1,count=0;
-      for(let y=0;y<h;y++)for(let x=run.left;x<run.right;x++)if(ink[y*w+x]){
-        top=Math.min(top,y);bottom=Math.max(bottom,y);count++;
-      }
-      if(count<5||bottom<top)continue;
-      const gh=bottom-top+1;
-      glyphs.push({left:run.left,right:run.right,top,bottom,gh,count});
-      maxH=Math.max(maxH,gh);globalTop=Math.min(globalTop,top);
-    }
-    if(!glyphs.length||maxH<h*.12)continue;
-    let output='',decimal=false,failed=false;
-    for(const g of glyphs){
-      const dw=g.right-g.left,dh=g.gh;
-      if(key==='seconds'&&dh<maxH*.34&&g.top>globalTop+maxH*.52&&dw<maxH*.30){
-        // Some clock decimal points are extremely short, but still meaningful.
-        decimal=true;break;
-      }
-      if(dh<maxH*.14)continue;
-      if(key==='seconds'&&dh<maxH*.76&&dw<maxH*.43) {
-        if(!output.includes(':')){output+=':';continue}
-        failed=true;break;
-      }
-      if(dw/dh<.29&&dh>maxH*.70){output+='1';continue}
-      if(dh<maxH*.55||dw/dh>1.08){failed=true;break}
-      const coverage=[];
-      for(const [x0,y0,x1,y1] of regions){
-        const xa=g.left+Math.floor(x0*dw),xb=Math.max(xa+1,g.left+Math.ceil(x1*dw));
-        const ya=g.top+Math.floor(y0*dh),yb=Math.max(ya+1,g.top+Math.ceil(y1*dh));
-        let on=0;
-        for(let y=ya;y<yb;y++)for(let x=xa;x<xb;x++)if(ink[y*w+x])on++;
-        coverage.push(on/Math.max(1,(xb-xa)*(yb-ya)));
-      }
-      const peak=Math.max(...coverage);
-      if(peak<.14){failed=true;break}
-      const bits=coverage.map(v=>v>Math.max(.10,peak*.38)?'1':'0').join('');
-      const digit=patterns.indexOf(bits);
-      if(digit<0){failed=true;break}
-      output+=String(digit);
-    }
-    if(failed||!output)continue;
-    if(key==='seconds'){
-      if(decimal){
-        if(!/^\d{1,2}$/.test(output))continue;
-      }else if(!/^(?:\d{1,2}:\d{2}|\d{1,2})$/.test(output))continue;
-    }else if(!/^\d{1,3}$/.test(output))continue;
-    const value=parseReading(key,output);
-    if(value===null)continue;
-    const id=String(value);
-    const found=votes.get(id)||{value,text:output,count:0};
-    found.count++;
-    votes.set(id,found);
+// Heartland TV connected-glyph seven-segment reader.
+// Treats each complete slanted digit as one shape instead of interpreting its
+// separate vertical LED bars as extra 1s. No changes to the camera or smoothing.
+function readSevenSegmentFast(image,key){
+ if(!['homeScore','awayScore','seconds','period'].includes(key))return null;
+ const sourceW=image.width,sourceH=image.height;
+ if(sourceW<8||sourceH<12)return null;
+ // Average to a compact image for fast processing of large camera crops.
+ const scale=Math.min(1,140/sourceW,90/sourceH);
+ const w=Math.max(8,Math.round(sourceW*scale)),h=Math.max(12,Math.round(sourceH*scale));
+ const raw=segmentPixels(image).gray,gray=new Uint8Array(w*h);
+ if(w===sourceW&&h===sourceH)gray.set(raw);
+ else for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const xa=Math.floor(x*sourceW/w),xb=Math.max(xa+1,Math.floor((x+1)*sourceW/w));
+  const ya=Math.floor(y*sourceH/h),yb=Math.max(ya+1,Math.floor((y+1)*sourceH/h));
+  let sum=0,count=0;
+  for(let yy=ya;yy<yb;yy++)for(let xx=xa;xx<xb;xx++){sum+=raw[yy*sourceW+xx];count++}
+  gray[y*w+x]=Math.round(sum/count);
+ }
+ const patterns=['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000','1111111','1111011'];
+ const regions=[[.22,0,.78,.17],[.70,.16,1,.43],[.70,.57,1,.86],[.22,.84,.78,1],[0,.57,.30,.86],[0,.16,.30,.43],[.22,.42,.78,.59]];
+ const votes=new Map();
+ for(const cutoff of [65,85,105,125,145]){
+  const ink=new Uint8Array(w*h),seen=new Uint8Array(w*h);
+  for(let i=0;i<gray.length;i++)if(gray[i]<cutoff)ink[i]=1;
+  const components=[];
+  for(let i=0;i<ink.length;i++){
+   if(!ink[i]||seen[i])continue;
+   const stack=[i],points=[];seen[i]=1;
+   let left=w,right=-1,top=h,bottom=-1;
+   while(stack.length){
+    const n=stack.pop(),x=n%w,y=Math.floor(n/w);
+    points.push(n);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+    let nn=n-1;
+    if(x>0&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n+1;
+    if(x+1<w&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n-w;
+    if(y>0&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n+w;
+    if(y+1<h&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n-w-1;
+    if(x>0&&y>0&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n-w+1;
+    if(x+1<w&&y>0&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n+w-1;
+    if(x>0&&y+1<h&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+    nn=n+w+1;
+    if(x+1<w&&y+1<h&&ink[nn]&&!seen[nn]){seen[nn]=1;stack.push(nn)}
+   }
+   if(points.length<Math.max(5,h*.085))continue;
+   const cw=right-left+1,ch=bottom-top+1;
+   components.push({left,right,top,bottom,w:cw,h:ch,area:points.length,points,cx:(left+right)/2,cy:(top+bottom)/2});
   }
-  const ordered=[...votes.values()].sort((a,b)=>b.count-a.count);
-  // Four matching thresholds are required before overriding the existing
-  // decoder. A low-confidence alternate cannot change the live broadcast.
-  if(!ordered.length||ordered[0].count<4|| (ordered[1]&&ordered[1].count>=ordered[0].count))return null;
-  const best=ordered[0];
-  return {value:best.value,text:best.text,confidence:Math.min(98,90+best.count),method:'Verified seven-segment'};
+  const potential=components.filter(c=>c.h>=Math.max(9,h*.24)&&c.w/c.h>=.065&&c.w/c.h<=1.12&&c.area>=c.h*.7);
+  if(!potential.length)continue;
+  const maxH=Math.max(...potential.map(c=>c.h));
+  const digits=potential.filter(c=>c.h>=maxH*.60).sort((a,b)=>a.left-b.left);
+  if(!digits.length||digits.length>5)continue;
+  const tops=Math.min(...digits.map(c=>c.top));
+  const dots=components.filter(c=>!digits.includes(c)&&c.h<maxH*.29&&c.w<maxH*.28&&c.area>Math.max(4,maxH*.10));
+  let colon=null,decimal=null;
+  if(key==='seconds'){
+   for(const a of dots)for(const b of dots){
+    if(a===b)continue;
+    if(Math.abs(a.cx-b.cx)<maxH*.20&&b.cy-a.cy>maxH*.22&&b.cy-a.cy<maxH*.72)colon=(a.cx+b.cx)/2;
+   }
+   if(colon===null){
+    const dotsBelow=dots.filter(d=>d.cy>tops+maxH*.62&&digits.some(c=>c.cx<d.cx)&&digits.some(c=>c.cx>d.cx));
+    if(dotsBelow.length)decimal=Math.max(...dotsBelow.map(d=>d.cx));
+   }
+  }
+  const used=digits.filter(c=>decimal===null||c.cx<decimal);
+  const decoded=[];
+  for(const c of used){
+   let d;
+   if(c.w/c.h<.36)d='1';
+   else{
+    const cov=[];
+    for(const [x0,y0,x1,y1] of regions){
+     const xa=c.left+Math.floor(x0*c.w),xb=Math.max(xa+1,c.left+Math.ceil(x1*c.w));
+     const ya=c.top+Math.floor(y0*c.h),yb=Math.max(ya+1,c.top+Math.ceil(y1*c.h));
+     let count=0;
+     for(const n of c.points){const x=n%w,y=Math.floor(n/w);if(x>=xa&&x<xb&&y>=ya&&y<yb)count++}
+     cov.push(count/Math.max(1,(xb-xa)*(yb-ya)));
+    }
+    const peak=Math.max(...cov),bits=cov.map(x=>x>Math.max(.10,peak*.38)?'1':'0').join('');
+    const index=patterns.indexOf(bits);if(index<0)break;d=String(index);
+   }
+   decoded.push({component:c,digit:d});
+  }
+  if(decoded.length!==used.length||!decoded.length)continue;
+  let text='';
+  if(key==='seconds'&&colon!==null){
+   const before=decoded.filter(p=>p.component.cx<colon).map(p=>p.digit).join('');
+   const after=decoded.filter(p=>p.component.cx>colon).map(p=>p.digit).join('');
+   if(!before||after.length!==2)continue;
+   text=before+':'+after;
+  }else{
+   text=decoded.map(p=>p.digit).join('');
+   // If the tiny decimal dot is invisible, the third digit is tenths.
+   if(key==='seconds'&&decimal===null&&text.length===3)text=text.slice(0,2);
+   if(key==='seconds'&&text.length>2)continue;
+  }
+  if(!text)continue;
+  const value=parseReading(key,text);
+  if(value===null)continue;
+  const vote=votes.get(value)||{value,text,count:0};vote.count++;votes.set(value,vote);
+ }
+ const ordered=[...votes.values()].sort((a,b)=>b.count-a.count);
+ if(!ordered.length||ordered[0].count<3||ordered[1]?.count===ordered[0].count)return null;
+ const winner=ordered[0];
+ return {value:winner.value,text:winner.text,confidence:Math.min(98,85+winner.count*2),method:'Connected LED digits'};
 }
