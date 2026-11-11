@@ -66,7 +66,22 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  if(key==='seconds'){const dots=components.filter(c=>c.b-c.t+1<height*.24&&c.r-c.l+1<height*.25&&c.points.length>=height*.3);
   for(const a of dots)for(const b of dots)if(a!==b&&Math.abs((a.l+a.r-b.l-b.r)/2)<height*.18&&b.t-a.b>height*.15&&b.t-a.b<height*.65){colonX=(a.l+a.r+b.l+b.r)/4;for(const n of [...a.points,...b.points])ink[n]=0}
  }
- if(key==='seconds'&&colonX===null){const dots=components.filter(c=>c.t>=top+height*.68&&c.b-c.t+1<height*.2&&c.r-c.l+1<height*.25&&c.points.length>=height*height*.001);if(dots.length===1){decimalX=(dots[0].l+dots[0].r)/2;decimalY=(dots[0].t+dots[0].b)/2;for(const n of dots[0].points)ink[n]=0}}
+ if(key==='seconds'&&colonX===null){
+  // The gym clock uses SS.t during the final minute. Its dot may split into
+  // multiple exposure islands, so requiring exactly one component loses it.
+  const dots=components.filter(c=>c.t>=top+height*.65&&c.b-c.t+1<height*.24&&c.r-c.l+1<height*.22&&c.points.length>=height*height*.0007);
+  const tallShapes=components.filter(c=>c.b-c.t+1>=height*.55);
+  const between=dots.filter(d=>{
+   const x=(d.l+d.r)/2;
+   return tallShapes.some(c=>c.r<x-height*.07)&&tallShapes.some(c=>c.l>x+height*.07);
+  });
+  if(between.length){
+   // Choose the rightmost plausible dot between whole seconds and tenths.
+   const dot=between.sort((a,b)=>b.l-a.l)[0];
+   decimalX=(dot.l+dot.r)/2;decimalY=(dot.t+dot.b)/2;
+   for(const d of dots)if(Math.abs((d.l+d.r)/2-decimalX)<height*.2)for(const n of d.points)ink[n]=0;
+  }
+ }
  // Tenths are outside the whole-seconds number. Remove them before grouping,
  // so their bars cannot change its height, lean, or digit boundaries.
  if(decimalX!==null){
@@ -145,6 +160,17 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
   confidence=Math.min(confidence,80+Math.max(0,match.certainty)*18);text+=match.digit;digits++;
  }
  if(key==='seconds'?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
+ // A single-number score often consists of disconnected LED strokes.
+ // Two skinny vertical slices are not reliable evidence of an 11.
+ if(key==='homeScore'||key==='awayScore'){
+  if(digits>1&&runs.length===digits){
+   const skinny=runs.filter(r=>{
+    let minY=h,maxY=-1;for(let y=top;y<=bottom;y++)for(let x=r.left;x<=r.right;x++)if(ink[y*w+x]){minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+    return (r.right-r.left+1)/Math.max(1,maxY-minY+1)<.24;
+   });
+   if(skinny.length>=2&&skinny.length===runs.length)return null;
+  }
+ }
  const value=parseReading(key,text);return value===null?null:{value,text,confidence,method:decimalX!==null?'Seven-segment · whole seconds':'Seven-segment'};
 }
 
