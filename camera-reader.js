@@ -12,7 +12,7 @@ function format(key,value){return value===null?'—':key==='seconds'?Math.floor(
 function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[])]}
 function ready(){return stream&&video.readyState>=2&&activeKeys().every(k=>config.regions[k])}
 function buttons(){byId('test').disabled=!ready()||busy||running;byId('start').disabled=!ready()||busy||running||!verified;byId('pause').disabled=!running;byId('apply').disabled=running||busy||!lastTest||!activeKeys().some(k=>lastTest[k]?.value!=null);byId('disconnect').disabled=!stream;byId('connect').disabled=busy||running}
-function pause(message='Automatic updates paused.'){running=false;generation++;candidates={};buttons();status(message)}
+function pause(message='Automatic updates paused.'){if(running&&config.clockEnabled)window.htvSmoothClock?.stopReader();running=false;generation++;candidates={};buttons();status(message)}
 function invalidate(){pause('Reading areas changed. Test the readings before starting.');verified=false;lastTest=null;buttons()}
 function point(event){const b=overlay.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(event.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(event.clientY-b.top)/b.height))}}
 function renderBoxes(){if(!video.videoWidth)return;overlay.width=video.videoWidth;overlay.height=video.videoHeight;ctx.clearRect(0,0,overlay.width,overlay.height);const regions={...config.regions};if(drag)regions[selected]={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};for(const [key,r] of Object.entries(regions)){if(!keys.includes(key))continue;ctx.strokeStyle=palette[key];ctx.lineWidth=3;ctx.strokeRect(r.x*overlay.width,r.y*overlay.height,r.w*overlay.width,r.h*overlay.height);ctx.fillStyle=palette[key];ctx.font='bold 18px Arial';ctx.fillText(key==='seconds'?'Clock':key==='period'?'Quarter':key==='homeScore'?'Left score':'Right score',r.x*overlay.width+4,Math.max(20,r.y*overlay.height-6))}}
@@ -232,7 +232,7 @@ function stable(key,value,time){
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
 function apply(result,automatic){
  const state=readState(),time=Date.now();
- if(state.running)state.seconds=Math.max(0,state.seconds-Math.floor((time-(state.stamp||time))/1000));
+ // Do not rewrite the running clock's timestamp for each camera frame.
  let changed=false;
  for(const key of activeKeys()){
   const reading=result[key],value=reading?.value??null;if(value===null)continue;
@@ -243,18 +243,21 @@ function apply(result,automatic){
   const prior=confirmed[key],transition=!prior||prior.value!==value;
   const changedAt=transition?(automatic?candidates[key]?.observedAt??sampleTime:sampleTime):prior.changedAt??prior.time;
   confirmed[key]={value,time:sampleTime,changedAt};
-  if(state[key]!==value){state[key]=value;changed=true}
-  if(key==='seconds'&&state.running){state.running=false;changed=true}
+  // Camera decoding and confirmation above are unchanged. The smoother
+  // translates confirmed clock readings into a steady running/stopped timer.
+  if(key==='seconds'&&window.htvSmoothClock){
+   if(window.htvSmoothClock.observe(state,value,sampleTime,time,automatic))changed=true;
+  }else if(state[key]!==value){state[key]=value;changed=true}
  }
  // Unchanged samples need no storage write or overlay redraw.
- if(changed){state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));window.htvSync?.publishScore();status('Updated overlay at '+new Date().toLocaleTimeString())}
+ if(changed){if(!Number.isFinite(state.stamp))state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));window.htvSync?.publishScore();status('Updated overlay at '+new Date().toLocaleTimeString())}
  for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
  return changed;
 }
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().some(k=>result[k].value!==null);const complete=activeKeys().every(k=>result[k].value!==null);status(verified?(complete?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Clear fields are ready. Start automatic updates to update those fields while retrying the others.'):'No clear fields yet. Check the crop previews and test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
 async function start(){
  if(!verified||!ready()||busy)return;
- running=true;candidates={};const seedTime=Date.now();
+ running=true;candidates={};if(config.clockEnabled)window.htvSmoothClock?.startReader();const seedTime=Date.now();
  for(const key of activeKeys())if(lastTest?.[key]?.value!=null)stable(key,lastTest[key].value,seedTime);
  const token=++generation;busy=true;buttons();status('Automatic updates on. Confirming readings…');
  const consume=(key,reading)=>{if(running&&token===generation)apply({[key]:reading},true)};
