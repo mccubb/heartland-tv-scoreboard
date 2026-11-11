@@ -27,6 +27,10 @@ async function engine(){if(worker)return worker;if(!window.Tesseract)throw Error
 function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||frame.width))),sh=Math.max(1,Math.round(r.h*(frame.videoHeight||frame.height))),scale=Math.min(6,Math.max(2,100/sh)),pad=15;const c=document.createElement('canvas');c.width=Math.round(sw*scale)+pad*2;c.height=Math.round(sh*scale)+pad*2;const x=c.getContext('2d',{willReadFrequently:true});x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.drawImage(frame,r.x*(frame.videoWidth||frame.width),r.y*(frame.videoHeight||frame.height),sw,sh,pad,pad,c.width-pad*2,c.height-pad*2);if(config.polarity!=='original'){const image=x.getImageData(pad,pad,c.width-pad*2,c.height-pad*2),p=image.data;let lo=255,hi=0;for(let i=0;i<p.length;i+=4){const v=Math.max(p[i],p[i+1],p[i+2]);lo=Math.min(lo,v);hi=Math.max(hi,v)}for(let i=0;i<p.length;i+=4){let v=255*(Math.max(p[i],p[i+1],p[i+2])-lo)/Math.max(1,hi-lo);if(config.polarity==='light')v=255-v;p[i]=p[i+1]=p[i+2]=v}x.putImageData(image,pad,pad)}return c}
 // Read the seven lit bars directly instead of asking a text model to guess a font.
 function readSevenSegment(image,key){
+ // First try the photographed-digit-tested multi-exposure reader. Keep the
+ // original OCR as fallback for fonts/exposures it cannot classify confidently.
+ const verified=readSevenSegmentFast(image,key);
+ if(verified)return verified;
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
  const prepared=segmentPixels(image);
@@ -202,7 +206,7 @@ async function decodeSegments(image,key){
  const lane=key==='seconds'?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegmentFast,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
