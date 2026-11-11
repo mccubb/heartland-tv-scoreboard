@@ -31,6 +31,9 @@ function readSevenSegment(image,key){
  // original OCR as fallback for fonts/exposures it cannot classify confidently.
  const verified=typeof readSevenSegmentFast==='function'?readSevenSegmentFast(image,key):null;
  if(verified)return verified;
+ // A split-stroke fallback can turn 3 or 2 into 1. Keep the last
+ // confirmed score/clock instead of broadcasting an unsupported guess.
+ if(typeof readSevenSegmentFast==='function'&&key!=='period')return null;
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
  const prepared=segmentPixels(image);
@@ -366,7 +369,7 @@ byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();
 for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v10 · verified digits + steady clock';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v11 · whole-digit recognition + smooth clock';
 buttons();
 
 
