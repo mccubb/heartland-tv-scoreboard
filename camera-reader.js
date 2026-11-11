@@ -245,12 +245,25 @@ function stable(key,value,time){
    candidates[key]={value,time,observedAt,count};
    // A deliberate clock correction/reset requires a steady reading, rather
    // than accepting a quick run of values that would speed up the countdown.
-   if(drop>0&&accepted.value<=60)return false;
-   return count>=3&&time-observedAt>=(drop<0?400:800);
+   // In the last minute we still need to accept a sustained clear reading
+   // after a missed second. Otherwise 0:19 can remain stuck while OCR sees 0:16.
+   // Require 3 observations and a short stable hold instead of rejecting forever.
+   return count>=3&&time-observedAt>=(drop<0?450:600);
   }
   const consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;
   candidates[key]={value,time,observedAt,count:consistent?previous.count+1:1};
   return candidates[key].count>=2;
+ }
+ // Basketball scores normally rise by 1–3 points. Reject 0 -> 11/13
+ // false reads and other implausible jumps without poisoning the history.
+ // Permit a larger catch-up only after an extended reader interruption.
+ if(key==='homeScore'||key==='awayScore'){
+  const accepted=confirmed[key];
+  if(accepted){
+   const age=Math.max(0,time-accepted.time);
+   const allowance=Math.min(9,3+Math.floor(age/6000));
+   if(value<accepted.value||value>accepted.value+allowance)return false;
+  }
  }
  const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
  candidates[key]={value,time,count,history};return count>=2;
