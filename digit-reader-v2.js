@@ -36,10 +36,11 @@ function readSevenSegmentFast(image, key) {
     let output='',decimal=false,failed=false;
     for(const g of glyphs){
       const dw=g.right-g.left,dh=g.gh;
-      if(dh<maxH*.14)continue;
       if(key==='seconds'&&dh<maxH*.34&&g.top>globalTop+maxH*.52&&dw<maxH*.30){
+        // Some clock decimal points are extremely short, but still meaningful.
         decimal=true;break;
       }
+      if(dh<maxH*.14)continue;
       if(key==='seconds'&&dh<maxH*.76&&dw<maxH*.43) {
         if(!output.includes(':')){output+=':';continue}
         failed=true;break;
