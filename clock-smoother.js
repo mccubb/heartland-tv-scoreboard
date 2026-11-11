@@ -138,6 +138,14 @@
     lastClearReadAt = Date.now();
   }
 
+  function noteClearRead() {
+    if (readingActive) {
+      lastClearReadAt = Date.now();
+      const notice = document.getElementById('clock-status');
+      if (notice && notice.textContent.includes('paused because')) notice.textContent = 'Smooth clock: clear camera readings restored; monitoring the gym clock.';
+    }
+  }
+
   function watchdog() {
     if (!readingActive || !lastClearReadAt || Date.now() - lastClearReadAt < LOST_READ_MS) return;
     let state;
@@ -152,6 +160,6 @@
     if (notice) notice.textContent = 'Smooth clock: paused because no clear clock reading arrived for 6.5 seconds.';
   }
 
-  window.htvSmoothClock = { observe, projected, startReader, stopReader, watchdog };
+  window.htvSmoothClock = { observe, projected, startReader, stopReader, noteClearRead, watchdog };
   setInterval(watchdog, 500);
 })();
