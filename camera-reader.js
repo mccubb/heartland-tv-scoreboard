@@ -216,6 +216,7 @@ async function scan(onField,fields=activeKeys()){
   if(config.reader==='segments')reading=await decodeSegments(image,key);
   else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
   const confidence=reading?.confidence||0;result[key]={sampledAt,value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
+  if(key==='seconds'&&result[key].value!==null)window.htvSmoothClock?.noteClearRead();
   const accepted=confirmed[key],observed=result[key].value;
   if(observed!==null)byId(key+'Value').textContent=format(key,observed);
   else if(accepted)byId(key+'Value').textContent=format(key,accepted.value);
