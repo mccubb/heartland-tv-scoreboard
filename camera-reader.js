@@ -163,8 +163,17 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  // the tiny decimal dot disappears under exposure or blends with a digit.
  // Three unseparated digits cannot represent a valid M:SS clock, so treat
  // the final digit as tenths rather than dropping this clear frame entirely.
+ let ambiguousClock=null;
  if(key==='seconds'&&colons===0&&digits===3&&decimalX===null){
-  text=text.slice(0,2);digits=2;confidence=Math.min(confidence,82);
+  // A missing separator may mean M:SS (1:39) or SS.t (21.0).
+  // Send both interpretations to the main reader instead of guessing.
+  const raw=text;
+  const tenths=Number(raw.slice(0,2));
+  const lastTwo=Number(raw.slice(1));
+  const minutes=lastTwo<60?Number(raw[0])*60+lastTwo:null;
+  ambiguousClock=minutes===null?[tenths]:[tenths,minutes];
+  text=minutes===null?raw.slice(0,2):raw[0]+':'+raw.slice(1);
+  digits=2;confidence=Math.min(confidence,82);
  }
  if(key==='seconds'?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
  // A single-number score often consists of disconnected LED strokes.
@@ -178,7 +187,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
    if(skinny.length>=2&&skinny.length===runs.length)return null;
   }
  }
- const value=parseReading(key,text);return value===null?null:{value,text,confidence,method:decimalX!==null?'Seven-segment · whole seconds':'Seven-segment'};
+ const value=parseReading(key,text);return value===null?null:{value,text,confidence,method:decimalX!==null?'Seven-segment · whole seconds':'Seven-segment',...(ambiguousClock?{alternatives:ambiguousClock}: {})};
 }
 
 // A three-frame median suppresses compression noise and single-frame LED
@@ -220,8 +229,33 @@ async function scan(onField,fields=activeKeys()){
  const result={};for(const key of order){
   const crops=frames.map(frame=>frame.images[key]),image=crops.length===3?medianCrop(crops):crops[0];
   const preview=byId(key+'Crop');preview.src=image.toDataURL('image/png');preview.hidden=false;let reading;
-  if(config.reader==='segments')reading=await decodeSegments(image,key);
-  else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
+  if(config.reader==='segments'){
+   reading=await decodeSegments(image,key);
+   // A three-frame median can erase a faint LED segment when the scoreboard
+   // flickers between frames. Only when it fails, inspect original frames.
+   if((!reading||reading.confidence<config.confidence)&&crops.length===3){
+    const trials=[];
+    for(const raw of [crops[0],crops[2]]){
+     const option=await decodeSegments(raw,key);
+     if(option&&option.confidence>=config.confidence)trials.push(option);
+    }
+    if(trials.length){
+     const agreed=trials.length>=2&&trials[0].value===trials[1].value;
+     const strongest=trials.sort((a,b)=>b.confidence-a.confidence)[0];
+     if(agreed||strongest.confidence>=86)
+      reading={...strongest,method:(strongest.method||'Seven-segment')+' · clear-frame recovery'};
+    }
+   }
+  }else{const {data}=await w.recognize(image);reading={value:parseReading(key,data.text),text:data.text.trim(),confidence:Number(data.confidence)||0,method:'Text OCR'}}
+  if(key==='seconds'&&reading?.alternatives?.length>1){
+   // Decide M:SS vs SS.t from the most recent reliable clock state.
+   const state=readState(),now=Date.now(),age=Math.max(0,now-(state.stamp||now));
+   const expected=state.running?Math.max(0,state.seconds-Math.floor(age/1000)):state.seconds;
+   const ref=confirmed.seconds?.value??expected;
+   reading.value=reading.alternatives.reduce((a,b)=>Math.abs(a-ref)<=Math.abs(b-ref)?a:b);
+   reading.text=format('seconds',reading.value);
+   reading.method+=' · separator inferred';
+  }
   const confidence=reading?.confidence||0;result[key]={sampledAt,value:reading&&confidence>=config.confidence?reading.value:null,text:reading?.text||'',confidence};
   if(key==='seconds'&&result[key].value!==null)window.htvSmoothClock?.noteClearRead();
   const accepted=confirmed[key],observed=result[key].value;
