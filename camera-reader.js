@@ -233,48 +233,46 @@ async function scan(onField,fields=activeKeys()){
   if(onField)await new Promise(resolve=>setTimeout(resolve,0));
  }return result;
 }
-function stable(key,value,time){
+function stable(key,value,time,confidence=0){
  const previous=candidates[key];
- // An unclear sample should not erase good recent evidence.
- if(value===null){if(previous&&time-previous.time>10000)delete candidates[key];return false}
+ if(value===null){if(previous&&time-previous.time>4000)delete candidates[key];return false}
+ // Never count an old frame as new confirmation.
+ if(previous&&time<=previous.time)return false;
  if(key==='seconds'){
   const accepted=confirmed[key],elapsed=previous?(time-previous.time)/1000:0;
-  const same=previous&&previous.value===value;
-  const observedAt=same?previous.observedAt??previous.time:time;
+  const same=previous&&previous.value===value&&elapsed<=2;
+  const observedAt=same?(previous.observedAt??previous.time):time;
   const count=same?previous.count+1:1;
-  if(accepted){
-   const age=(time-(accepted.changedAt??accepted.time))/1000,drop=accepted.value-value;
-   // Duplicate samples do not reset this budget. Allow one real second per
-   // second, with a small allowance for camera jitter; never replay a backlog.
-   const budget=Math.min(Math.max(0,Math.floor(age+.35)),Math.max(0,Math.ceil((time-accepted.time)/1000)));
-   if(drop===0||(drop>0&&drop<=budget)){
-    candidates[key]={value,time,observedAt,count:Math.max(2,count)};return true;
-   }
-   candidates[key]={value,time,observedAt,count};
-   // A deliberate clock correction/reset requires a steady reading, rather
-   // than accepting a quick run of values that would speed up the countdown.
-   // In the last minute we still need to accept a sustained clear reading
-   // after a missed second. Otherwise 0:19 can remain stuck while OCR sees 0:16.
-   // Require 3 observations and a short stable hold instead of rejecting forever.
-   return count>=3&&time-observedAt>=(drop<0?450:600);
+  candidates[key]={value,time,observedAt,count};
+  if(!accepted){
+   // Start as soon as two consecutive camera frames support the same time.
+   return count>=2&&time-observedAt>=100;
   }
-  const consistent=previous&&elapsed<=10&&value<=previous.value&&previous.value-value<=Math.ceil(elapsed)+1;
-  candidates[key]={value,time,observedAt,count:consistent?previous.count+1:1};
-  return candidates[key].count>=2;
+  const age=(time-(accepted.changedAt??accepted.time))/1000,drop=accepted.value-value;
+  const budget=Math.min(Math.max(0,Math.floor(age+.4)),Math.max(0,Math.ceil((time-accepted.time)/1000)));
+  if(drop===0||(drop>0&&drop<=budget))return true;
+  // A reset/correction is valid even if it moves time upward. Distinguish
+  // it from a single erroneous frame using corroborating camera samples.
+  const need=confidence>=85?2:3;
+  const hold=confidence>=85?160:420;
+  return count>=need&&time-observedAt>=hold;
  }
- // Basketball scores normally rise by 1–3 points. Reject 0 -> 11/13
- // false reads and other implausible jumps without poisoning the history.
- // Permit a larger catch-up only after an extended reader interruption.
- if(key==='homeScore'||key==='awayScore'){
-  const accepted=confirmed[key];
-  if(accepted){
-   const age=Math.max(0,time-accepted.time);
-   const allowance=Math.min(9,3+Math.floor(age/6000));
-   if(value<accepted.value||value>accepted.value+allowance)return false;
-  }
- }
- const history=(previous?.history||[]).filter(r=>time-r.time<=10000);history.push({value,time});while(history.length>5)history.shift();let count=0;for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
- candidates[key]={value,time,count,history};return count>=2;
+ // Ordinary 1–3 point changes are quick. A large jump/reset is not impossible:
+ // e.g. testing 4 -> 22. Accept it if the physical display stays consistent.
+ // Alternating false readings like 0 -> 11 -> 13 never accumulate confirmations.
+ const history=(previous?.history||[]).filter(r=>time-r.time<=3000);
+ history.push({value,time});
+ while(history.length>6)history.shift();
+ let count=0;
+ for(let i=history.length-1;i>=0&&history[i].value===value;i--)count++;
+ const streakStart=history[history.length-count]?.time??time;
+ const old=confirmed[key]?.value;
+ const large=old!==undefined&&(value<old||value>old+3);
+ const suspicious=old===0&&(value===11||value===13);
+ const minCount=suspicious?5:large?3:2;
+ const minDuration=suspicious?1500:large?650:0;
+ candidates[key]={value,time,count,history,observedAt:streakStart};
+ return count>=minCount&&time-streakStart>=minDuration;
 }
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
 function apply(result,automatic){
@@ -286,7 +284,7 @@ function apply(result,automatic){
   const sampleTime=reading.sampledAt??time;
   // A completed old frame must never masquerade as the current clock.
   if(automatic&&key==='seconds'&&(time-sampleTime>700||sampleTime<(confirmed[key]?.time??0)))continue;
-  if(automatic&&!stable(key,value,sampleTime))continue;
+  if(automatic&&!stable(key,value,sampleTime,reading.confidence??0))continue;
   const prior=confirmed[key],transition=!prior||prior.value!==value;
   const changedAt=transition?(automatic?candidates[key]?.observedAt??sampleTime:sampleTime):prior.changedAt??prior.time;
   confirmed[key]={value,time:sampleTime,changedAt};
