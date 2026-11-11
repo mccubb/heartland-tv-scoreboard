@@ -85,7 +85,12 @@ function readSevenSegmentFast(image,key){
      cov.push(count/Math.max(1,(xb-xa)*(yb-ya)));
     }
     const peak=Math.max(...cov),bits=cov.map(x=>x>Math.max(.10,peak*.38)?'1':'0').join('');
-    const index=patterns.indexOf(bits);if(index<0)break;d=String(index);
+    // In this gym's slanted 7, the long lower-right stroke touches the
+    // bottom sample area, giving 1111000 instead of the ideal 1110000.
+    // Its left and middle segments are still completely dark, so this
+    // narrowly scoped repair distinguishes 7 from 1, 3 and 4.
+    const index=bits==='1111000'&&c.w/c.h<.75?7:patterns.indexOf(bits);
+    if(index<0)break;d=String(index);
    }
    decoded.push({component:c,digit:d});
   }
