@@ -261,7 +261,11 @@ async function scan(onField,fields=activeKeys()){
   const accepted=confirmed[key],observed=result[key].value;
   if(observed!==null)byId(key+'Value').textContent=format(key,observed);
   else if(accepted)byId(key+'Value').textContent=format(key,accepted.value);
-  byId(key+'Note').textContent=observed===null?(accepted?'Holding confirmed '+format(key,accepted.value)+' · last confirmed '+Math.floor((Date.now()-accepted.time)/1000)+'s ago':'Checking digit bars — waiting for a clear sample'):reading.method+' · '+Math.round(confidence)+'% confidence'+(running?' · confirming for overlay':'');
+  byId(key+'Note').textContent=observed===null?
+   (accepted?'Camera image unclear · overlay holding '+format(key,accepted.value)+' ('+Math.floor((Date.now()-accepted.time)/1000)+'s since last confirmed)':'Camera image unclear — check number boxes and focus'):
+   (reading.method+' · '+Math.round(confidence)+'% · '+(accepted&&accepted.value!==observed?
+    'Camera sees '+format(key,observed)+'; verifying change from '+format(key,accepted.value):
+    running?'checking / synchronizing overlay':'ready for verification'));
   if(onField&&token===generation&&running)onField(key,result[key]);
   // Let the overlay receive the clock write before processing other fields.
   if(onField)await new Promise(resolve=>setTimeout(resolve,0));
