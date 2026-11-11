@@ -159,6 +159,13 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
   if(!match)return null;
   confidence=Math.min(confidence,80+Math.max(0,match.certainty)*18);text+=match.digit;digits++;
  }
+ // The final minute is shown by our gym scoreboard as SS.t. Sometimes
+ // the tiny decimal dot disappears under exposure or blends with a digit.
+ // Three unseparated digits cannot represent a valid M:SS clock, so treat
+ // the final digit as tenths rather than dropping this clear frame entirely.
+ if(key==='seconds'&&colons===0&&digits===3&&decimalX===null){
+  text=text.slice(0,2);digits=2;confidence=Math.min(confidence,82);
+ }
  if(key==='seconds'?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
  // A single-number score often consists of disconnected LED strokes.
  // Two skinny vertical slices are not reliable evidence of an 11.
