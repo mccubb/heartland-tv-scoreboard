@@ -29,7 +29,7 @@ function crop(frame,r){const sw=Math.max(1,Math.round(r.w*(frame.videoWidth||fra
 function readSevenSegment(image,key){
  // First try the photographed-digit-tested multi-exposure reader. Keep the
  // original OCR as fallback for fonts/exposures it cannot classify confidently.
- const verified=readSevenSegmentFast(image,key);
+ const verified=typeof readSevenSegmentFast==='function'?readSevenSegmentFast(image,key):null;
  if(verified)return verified;
  // Check more than one exposure cutoff. A faint bar should not disappear
  // solely because a bright reflection changed the crop's contrast.
@@ -206,7 +206,7 @@ async function decodeSegments(image,key){
  const lane=key==='seconds'?'clock':'scores';let entry=decoderWorkers.get(lane);
  if(!entry){
   try{
-   const code=[parseReading,segmentPixels,readSevenSegmentPass,readSevenSegmentFast,readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
+   const code=[parseReading,segmentPixels,readSevenSegmentPass,...(typeof readSevenSegmentFast==='function'?[readSevenSegmentFast]:[]),readSevenSegment].map(fn=>fn.toString()).join('\n')+`\nonmessage=event=>{const {id,key,width,height,pixels}=event.data;try{const image={width,height,getContext:()=>({getImageData:()=>({data:pixels})})};postMessage({id,reading:readSevenSegment(image,key)})}catch(e){postMessage({id,error:e.message})}}`;
    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})),worker=new Worker(url);URL.revokeObjectURL(url);
    entry={worker,pending:new Map()};worker.onmessage=event=>{const pending=entry.pending.get(event.data.id);if(!pending)return;entry.pending.delete(event.data.id);event.data.error?pending.reject(Error(event.data.error)):pending.resolve(event.data.reading)};
    worker.onerror=()=>{for(const pending of entry.pending.values())pending.reject(Error('Digit reader worker failed. Reload the camera reader.'));entry.pending.clear();worker.terminate();decoderWorkers.delete(lane)};
