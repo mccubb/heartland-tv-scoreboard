@@ -97,6 +97,8 @@
     const copy = { ...state, home: { ...state.home }, away: { ...state.away } };
     delete copy.home.logo;
     delete copy.away.logo;
+    delete copy.home.logoUpdatedAt;
+    delete copy.away.logoUpdatedAt;
     return copy;
   }
 
@@ -138,39 +140,62 @@
     });
   }
 
-  function publishLogo(side, src, force) {
-    if (!force && lastLogoSource[side] === src) return;
-    lastLogoSource[side] = src;
+  // Only a deliberate upload or reset changes the logo. Ordinary color/record
+  // changes must never publish an empty logo or overwrite another saved image.
+  function publishLogoChange(side, removed) {
+    if (side !== "home" && side !== "away") return;
+    const brand = getJSON(KEYS.branding);
+    if (!valid("branding", brand)) return;
+    const settings = brand[side];
+    const src = typeof settings.logo === "string" ? settings.logo : "";
+    const revision = Number(settings.logoUpdatedAt) || 0;
+    if (!removed && !src) return; // Absence is not a command to erase a logo.
     const generation = ++logoGeneration[side];
-    compactLogo(src).then(function(logo) {
-      // If a newer logo was selected during encoding, discard the older operation.
+    lastLogoSource[side] = src;
+    compactLogo(removed ? "" : src).then(function(logo) {
       if (generation !== logoGeneration[side]) return;
       if (logo === null) {
-        status("one team logo is too large to send, but records, rankings and colors are synced");
+        status("logo could not be compressed; team settings are still saved");
         return;
       }
       const kind = side === "home" ? "logoHome" : "logoAway";
       const sentAt = Math.max(Date.now(), latest[kind] + 1);
       latest[kind] = sentAt;
       sent[kind] = sentAt;
-      transmit(kind, { version: 1, from: instance, sentAt: sentAt, logo: logo });
+      transmit(kind, {
+        version: 2, from: instance, sentAt: sentAt,
+        logo: logo, updatedAt: revision, removed: !!removed
+      });
     });
   }
 
-  function publishBrand(forceLogos) {
+  function publishSavedLogos() {
     const brand = getJSON(KEYS.branding);
     if (!valid("branding", brand)) return;
-    publish("branding");
     for (const side of ["home", "away"]) {
-      publishLogo(side, brand[side].logo || "", !!forceLogos);
+      // A blank logo in a newly opened/older controller is NOT a request to
+      // remove the last logo stored for the live YoloBox receiver.
+      if (typeof brand[side].logo === "string" && brand[side].logo) {
+        publishLogoChange(side, false);
+      }
     }
+  }
+
+  function publishBrand() {
+    publish("branding");
   }
 
   window.htvSync = {
     publishScore: function () { publish("score"); },
-    publishBrand: function () { publishBrand(false); },
+    publishBrand: publishBrand,
+    publishLogoChange: publishLogoChange,
     publishDisplay: function () { publish("display"); },
-    publishAll: function () { publish("score"); publishBrand(true); publish("display"); },
+    publishAll: function () {
+      publish("score");
+      publishBrand();
+      publishSavedLogos();
+      publish("display");
+    },
     isConnected: function () { return connected; }
   };
 
@@ -196,7 +221,8 @@
   function receive(topic, bytes) {
     let packet;
     try { packet = JSON.parse(bytes.toString()); } catch (error) { return; }
-    if (!packet || packet.version !== 1 || packet.from === instance) return;
+    if (!packet || (packet.version !== 1 && packet.version !== 2) ||
+        packet.from === instance) return;
     if (topic === PRESENCE_TOPIC) {
       if (packet.role === "overlay" && typeof packet.from === "string") {
         receivers.set(packet.from, Date.now());
@@ -226,18 +252,37 @@
     if (isLogo) {
       if (typeof packet.logo !== "string" || packet.logo.length > 230000 ||
           (packet.logo && !/^data:image\/(png|jpeg|webp);base64,/.test(packet.logo))) return;
+      // Older versions routinely broadcast empty logos. Ignore these legacy
+      // empties; only an explicit version-2 "Use default logo" can remove one.
+      if (!packet.logo && !(packet.version === 2 && packet.removed === true)) return;
     } else if (!valid(kind, packet.state)) return;
 
     if (packet.sentAt <= latest[kind]) {
       acknowledge(kind, packet.sentAt, packet.from);
       return;
     }
-    latest[kind] = packet.sentAt;
     try {
       if (isLogo) {
         const side = kind === "logoHome" ? "home" : "away";
         const brand = getJSON(KEYS.branding) || { home: {}, away: {} };
-        brand[side] = { ...(brand[side] || {}), logo: packet.logo };
+        const stored = brand[side] || {};
+        const currentRevision = Number(stored.logoUpdatedAt) || 0;
+        const incomingRevision = Number(packet.updatedAt) || 0;
+        // Never replace the user's newer explicitly selected logo with a
+        // stale retained packet from a controller or an older cache.
+        if ((currentRevision && incomingRevision < currentRevision) ||
+            (currentRevision && !incomingRevision) ||
+            (currentRevision === incomingRevision && currentRevision > 0 &&
+             isController && typeof stored.logo === "string" &&
+             stored.logo !== packet.logo)) {
+          latest[kind] = Math.max(latest[kind], packet.sentAt);
+          return;
+        }
+        brand[side] = {
+          ...stored,
+          logo: packet.removed === true ? "" : packet.logo,
+          logoUpdatedAt: Math.max(currentRevision, incomingRevision)
+        };
         localStorage.setItem(KEYS.branding, JSON.stringify(brand));
         window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: "branding" } }));
       } else if (kind === "branding") {
@@ -252,6 +297,7 @@
         localStorage.setItem(KEYS[kind], JSON.stringify(packet.state));
         window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: kind } }));
       }
+      latest[kind] = packet.sentAt;
       acknowledge(kind, packet.sentAt, packet.from);
     } catch (error) {
       status("browser storage unavailable");
@@ -275,7 +321,7 @@
       // Publish it BEFORE subscribing to old retained data; otherwise the broker could
       // restore outdated team records and rankings over the newer local setup.
       if (isController) {
-        if (valid("branding", getJSON(KEYS.branding))) publishBrand(true);
+        if (valid("branding", getJSON(KEYS.branding))) { publishBrand(); publishSavedLogos(); }
         if (valid("display", getJSON(KEYS.display))) publish("display");
       }
       const subscriptions = Object.values(TOPICS).concat([PRESENCE_TOPIC, ACK_TOPIC]);
