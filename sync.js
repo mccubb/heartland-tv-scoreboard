@@ -16,6 +16,7 @@
   const ACK_TOPIC = PREFIX + "overlay-ack";
   const instance = "htv-" + Math.random().toString(36).slice(2, 12);
   const isOverlay = !!document.getElementById("bug");
+  const isController = !!document.getElementById("scoreboardSize");
   const latest = { score: 0, branding: 0, display: 0, logoHome: 0, logoAway: 0 };
   const lastLogoSource = { home: null, away: null };
   const logoGeneration = { home: 0, away: 0 };
@@ -270,6 +271,13 @@
     client.on("connect", function () {
       connected = true;
       status("connected");
+      // The operator's saved team setup is authoritative when they open the controller.
+      // Publish it BEFORE subscribing to old retained data; otherwise the broker could
+      // restore outdated team records and rankings over the newer local setup.
+      if (isController) {
+        if (valid("branding", getJSON(KEYS.branding))) publishBrand(true);
+        if (valid("display", getJSON(KEYS.display))) publish("display");
+      }
       const subscriptions = Object.values(TOPICS).concat([PRESENCE_TOPIC, ACK_TOPIC]);
       client.subscribe(subscriptions, { qos: 1 }, function (error) {
         if (error) { status("subscription failed; retrying"); return; }
