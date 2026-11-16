@@ -284,12 +284,31 @@
           logoUpdatedAt: Math.max(currentRevision, incomingRevision)
         };
         localStorage.setItem(KEYS.branding, JSON.stringify(brand));
+        if (isController) {
+          // Also protect an image received from another current controller.
+          try {
+            const key = "htv-logo-backup-" + side;
+            if (packet.removed) localStorage.removeItem(key);
+            else if (incomingRevision > 0) {
+              localStorage.setItem(key, JSON.stringify({
+                logo: packet.logo, updatedAt: incomingRevision
+              }));
+            }
+          } catch (error) {}
+        }
         window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: "branding" } }));
       } else if (kind === "branding") {
         const brand = getJSON(KEYS.branding) || {};
-        const home = { ...(brand.home || {}), ...packet.state.home };
-        const away = { ...(brand.away || {}), ...packet.state.away };
-        // New metadata packets omit .logo, so preserve the last received image.
+        // A cached old controller can still send a full branding object with
+        // logo:"". Never let generic branding overwrite scoring images.
+        const incomingHome = { ...packet.state.home };
+        const incomingAway = { ...packet.state.away };
+        delete incomingHome.logo;
+        delete incomingAway.logo;
+        delete incomingHome.logoUpdatedAt;
+        delete incomingAway.logoUpdatedAt;
+        const home = { ...(brand.home || {}), ...incomingHome };
+        const away = { ...(brand.away || {}), ...incomingAway };
         const merged = { ...brand, ...packet.state, home: home, away: away };
         localStorage.setItem(KEYS.branding, JSON.stringify(merged));
         window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: kind } }));
