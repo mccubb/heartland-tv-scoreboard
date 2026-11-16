@@ -8,13 +8,17 @@
   const TOPICS = {
     score: PREFIX + "score",
     branding: PREFIX + "branding",
-    display: PREFIX + "display"
+    display: PREFIX + "display",
+    logoHome: PREFIX + "logo-home",
+    logoAway: PREFIX + "logo-away"
   };
   const PRESENCE_TOPIC = PREFIX + "overlay-presence";
   const ACK_TOPIC = PREFIX + "overlay-ack";
   const instance = "htv-" + Math.random().toString(36).slice(2, 12);
   const isOverlay = !!document.getElementById("bug");
-  const latest = { score: 0, branding: 0, display: 0 };
+  const latest = { score: 0, branding: 0, display: 0, logoHome: 0, logoAway: 0 };
+  const lastLogoSource = { home: null, away: null };
+  const logoGeneration = { home: 0, away: 0 };
   const pending = {};
   const sent = {};
   const receivers = new Map();
@@ -86,26 +90,86 @@
     }
   }
 
+  // Always send team names, ranks, records, and colors without embedded logo data.
+  // A big PNG should NEVER prevent the ordinary scoreboard settings from arriving.
+  function brandWithoutLogos(state) {
+    const copy = { ...state, home: { ...state.home }, away: { ...state.away } };
+    delete copy.home.logo;
+    delete copy.away.logo;
+    return copy;
+  }
+
   function publish(kind) {
-    const state = getJSON(KEYS[kind]);
-    if (!valid(kind, state)) return;
-    // Only a message timestamp; no changes to the camera reader or game clock.
+    const stored = getJSON(KEYS[kind]);
+    if (!valid(kind, stored)) return;
+    const state = kind === "branding" ? brandWithoutLogos(stored) : stored;
+    // Only sync metadata; never alter the score calculation or camera reader.
     const sentAt = Math.max(Date.now(), latest[kind] + 1);
     latest[kind] = sentAt;
     const packet = { version: 1, from: instance, sentAt: sentAt, state: state };
-    if (JSON.stringify(packet).length > 250000) {
-      status("logo file is too large to sync; smaller logos allow branding to update");
+    if (JSON.stringify(packet).length > 220000) {
+      status("update was unexpectedly too large; check the controller fields");
       return;
     }
     sent[kind] = sentAt;
     transmit(kind, packet);
   }
 
+  function compactLogo(src) {
+    if (!src || !/^data:image\/(png|jpeg|webp);base64,/.test(src)) return Promise.resolve("");
+    if (src.length < 170000) return Promise.resolve(src);
+    return new Promise(async function(resolve) {
+      try {
+        const img = new Image();
+        img.src = src;
+        await img.decode();
+        for (const maxPixels of [384, 256, 192]) {
+          const ratio = Math.min(1, maxPixels / img.naturalWidth, maxPixels / img.naturalHeight);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * ratio));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * ratio));
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          const webp = canvas.toDataURL("image/webp", maxPixels === 384 ? .82 : .7);
+          if (webp.length < 190000) { resolve(webp); return; }
+        }
+      } catch (error) {}
+      resolve(null);
+    });
+  }
+
+  function publishLogo(side, src, force) {
+    if (!force && lastLogoSource[side] === src) return;
+    lastLogoSource[side] = src;
+    const generation = ++logoGeneration[side];
+    compactLogo(src).then(function(logo) {
+      // If a newer logo was selected during encoding, discard the older operation.
+      if (generation !== logoGeneration[side]) return;
+      if (logo === null) {
+        status("one team logo is too large to send, but records, rankings and colors are synced");
+        return;
+      }
+      const kind = side === "home" ? "logoHome" : "logoAway";
+      const sentAt = Math.max(Date.now(), latest[kind] + 1);
+      latest[kind] = sentAt;
+      sent[kind] = sentAt;
+      transmit(kind, { version: 1, from: instance, sentAt: sentAt, logo: logo });
+    });
+  }
+
+  function publishBrand(forceLogos) {
+    const brand = getJSON(KEYS.branding);
+    if (!valid("branding", brand)) return;
+    publish("branding");
+    for (const side of ["home", "away"]) {
+      publishLogo(side, brand[side].logo || "", !!forceLogos);
+    }
+  }
+
   window.htvSync = {
     publishScore: function () { publish("score"); },
-    publishBrand: function () { publish("branding"); },
+    publishBrand: function () { publishBrand(false); },
     publishDisplay: function () { publish("display"); },
-    publishAll: function () { ["score", "branding", "display"].forEach(publish); },
+    publishAll: function () { publish("score"); publishBrand(true); publish("display"); },
     isConnected: function () { return connected; }
   };
 
@@ -144,7 +208,8 @@
           packet.sentAt >= sent[packet.kind]) {
         receivers.set(packet.from, Date.now());
         lastAcknowledged = packet.kind === "display" ? "size" :
-          packet.kind === "branding" ? "team settings" : "score";
+          packet.kind === "branding" ? "team settings" :
+          packet.kind === "logoHome" || packet.kind === "logoAway" ? "team logo" : "score";
         lastAcknowledgedAt = Date.now();
         receiverStatus();
       }
@@ -152,18 +217,40 @@
     }
     const kind = topic === TOPICS.score ? "score" :
       topic === TOPICS.branding ? "branding" :
-      topic === TOPICS.display ? "display" : null;
-    if (!kind || !Number.isFinite(packet.sentAt) ||
-        !valid(kind, packet.state)) return;
-    // A duplicate retained message can still be acknowledged for the sender.
+      topic === TOPICS.display ? "display" :
+      topic === TOPICS.logoHome ? "logoHome" :
+      topic === TOPICS.logoAway ? "logoAway" : null;
+    if (!kind || !Number.isFinite(packet.sentAt)) return;
+    const isLogo = kind === "logoHome" || kind === "logoAway";
+    if (isLogo) {
+      if (typeof packet.logo !== "string" || packet.logo.length > 230000 ||
+          (packet.logo && !/^data:image\/(png|jpeg|webp);base64,/.test(packet.logo))) return;
+    } else if (!valid(kind, packet.state)) return;
+
     if (packet.sentAt <= latest[kind]) {
       acknowledge(kind, packet.sentAt, packet.from);
       return;
     }
     latest[kind] = packet.sentAt;
     try {
-      localStorage.setItem(KEYS[kind], JSON.stringify(packet.state));
-      window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: kind } }));
+      if (isLogo) {
+        const side = kind === "logoHome" ? "home" : "away";
+        const brand = getJSON(KEYS.branding) || { home: {}, away: {} };
+        brand[side] = { ...(brand[side] || {}), logo: packet.logo };
+        localStorage.setItem(KEYS.branding, JSON.stringify(brand));
+        window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: "branding" } }));
+      } else if (kind === "branding") {
+        const brand = getJSON(KEYS.branding) || {};
+        const home = { ...(brand.home || {}), ...packet.state.home };
+        const away = { ...(brand.away || {}), ...packet.state.away };
+        // New metadata packets omit .logo, so preserve the last received image.
+        const merged = { ...brand, ...packet.state, home: home, away: away };
+        localStorage.setItem(KEYS.branding, JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: kind } }));
+      } else {
+        localStorage.setItem(KEYS[kind], JSON.stringify(packet.state));
+        window.dispatchEvent(new CustomEvent("htv-sync-updated", { detail: { kind: kind } }));
+      }
       acknowledge(kind, packet.sentAt, packet.from);
     } catch (error) {
       status("browser storage unavailable");
