@@ -55,4 +55,4 @@ function brandDraw(){const b=readBrand();for(const side of ['home','away']){for(
 window.addEventListener('storage',event=>{if(event.key==='htv-branding')brandDraw();if(event.key===DISPLAY_KEY)displayDraw()});window.addEventListener('htv-sync-updated',event=>{if(event.detail?.kind==='branding')brandDraw();if(event.detail?.kind==='display')displayDraw()});brandDraw();displayDraw();
 function draw(){let s=current();hs.textContent=s.homeScore;as.textContent=s.awayScore;if(document.activeElement!==hn)hn.value=s.homeName;if(document.activeElement!==an)an.value=s.awayName;per.value=s.period;let m=Math.floor(s.seconds/60),q=s.seconds%60;clk.textContent=m+":"+String(q).padStart(2,"0");run.textContent=s.running?"STOP":"START";run.className=(s.running?"red":"blue")+" wide"}
 draw();setInterval(draw,250);
-</script><script src="https://cdn.jsdelivr.net/npm/mqtt@5.15.1/dist/mqtt.min.js"></script><script src="./sync.js?v=live-sync-2"></script></body></html>
+</script><script src="https://cdn.jsdelivr.net/npm/mqtt@5.15.1/dist/mqtt.min.js"></script><script src="./sync.js?v=team-sync-20261116-3"></script></body></html>
