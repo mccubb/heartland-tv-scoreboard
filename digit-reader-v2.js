@@ -2,7 +2,7 @@
 // Treats each complete slanted digit as one shape instead of interpreting its
 // separate vertical LED bars as extra 1s. No changes to the camera or smoothing.
 function readSevenSegmentFast(image,key){
- if(!['homeScore','awayScore','seconds','period','homeFouls','awayFouls'].includes(key))return null;
+ if(!['homeScore','awayScore','seconds','period','homeFouls','awayFouls','homeTimeouts','awayTimeouts'].includes(key))return null;
  const sourceW=image.width,sourceH=image.height;
  if(sourceW<8||sourceH<12)return null;
  // Average to a compact image for fast processing of large camera crops.
