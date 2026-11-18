@@ -1,21 +1,21 @@
 'use strict';
-const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','seconds','period','homeFouls','awayFouls'];
-let config={regions:{},reader:'segments',polarity:'light',confidence:70,clockEnabled:false,quarterEnabled:false,foulsEnabled:false,device:''};
+const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','seconds','period','homeFouls','awayFouls','homeTimeouts','awayTimeouts'];
+let config={regions:{},reader:'segments',polarity:'light',confidence:70,clockEnabled:false,quarterEnabled:false,foulsEnabled:false,timeoutsEnabled:false,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
 let stream=null,worker=null,loading=null,busy=false,running=false,generation=0,selected=null,drag=null,lastTest=null,verified=false;
 let candidates={},confirmed={};const video=byId('video'),overlay=byId('overlay'),ctx=overlay.getContext('2d');
-const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a',period:'#d7a9ff',homeFouls:'#ffd86d',awayFouls:'#f19edc'};
+const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a',period:'#d7a9ff',homeFouls:'#ffd86d',awayFouls:'#f19edc',homeTimeouts:'#59d8bb',awayTimeouts:'#f6a6ce'};
 function status(text){byId('status').textContent=text}
 function store(){localStorage.setItem('htv-camera',JSON.stringify(config))}
-function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key==='period'){const ot=clean.match(/^OT([1-5])$/i);if(ot)return Number(ot[1])+4}if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):key==='homeFouls'||key==='awayFouls'?(n<=99?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
+function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key==='period'){const ot=clean.match(/^OT([1-5])$/i);if(ot)return Number(ot[1])+4}if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):key==='homeFouls'||key==='awayFouls'?(n<=99?n:null):key==='homeTimeouts'||key==='awayTimeouts'?(n<=5?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
 function format(key,value){return value===null?'—':key==='seconds'?Math.floor(value/60)+':'+String(value%60).padStart(2,'0'):key==='period'&&value>4?'OT'+(value-4):String(value)}
-function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[]),...(config.foulsEnabled&&byId('homeFoulsCrop')&&byId('awayFoulsCrop')?['homeFouls','awayFouls']:[])]}
+function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[]),...(config.foulsEnabled&&byId('homeFoulsCrop')&&byId('awayFoulsCrop')?['homeFouls','awayFouls']:[]),...(config.timeoutsEnabled&&byId('homeTimeoutsCrop')&&byId('awayTimeoutsCrop')?['homeTimeouts','awayTimeouts']:[])]}
 function ready(){return stream&&video.readyState>=2&&activeKeys().every(k=>config.regions[k])}
 function buttons(){byId('test').disabled=!ready()||busy||running;byId('start').disabled=!ready()||busy||running||!verified;byId('pause').disabled=!running;byId('apply').disabled=running||busy||!lastTest||!activeKeys().some(k=>lastTest[k]?.value!=null);byId('disconnect').disabled=!stream;byId('connect').disabled=busy||running}
 function pause(message='Automatic updates paused.'){if(running&&config.clockEnabled)window.htvSmoothClock?.stopReader();running=false;generation++;candidates={};buttons();status(message)}
 function invalidate(){pause('Reading areas changed. Test the readings before starting.');verified=false;lastTest=null;buttons()}
 function point(event){const b=overlay.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(event.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(event.clientY-b.top)/b.height))}}
-function renderBoxes(){if(!video.videoWidth)return;overlay.width=video.videoWidth;overlay.height=video.videoHeight;ctx.clearRect(0,0,overlay.width,overlay.height);const regions={...config.regions};if(drag)regions[selected]={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};for(const [key,r] of Object.entries(regions)){if(!keys.includes(key))continue;ctx.strokeStyle=palette[key];ctx.lineWidth=3;ctx.strokeRect(r.x*overlay.width,r.y*overlay.height,r.w*overlay.width,r.h*overlay.height);ctx.fillStyle=palette[key];ctx.font='bold 18px Arial';ctx.fillText(key==='seconds'?'Clock':key==='period'?'Quarter':key==='homeScore'?'Left score':key==='awayScore'?'Right score':key==='homeFouls'?'Left fouls':'Right fouls',r.x*overlay.width+4,Math.max(20,r.y*overlay.height-6))}}
+function renderBoxes(){if(!video.videoWidth)return;overlay.width=video.videoWidth;overlay.height=video.videoHeight;ctx.clearRect(0,0,overlay.width,overlay.height);const regions={...config.regions};if(drag)regions[selected]={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};for(const [key,r] of Object.entries(regions)){if(!keys.includes(key))continue;ctx.strokeStyle=palette[key];ctx.lineWidth=3;ctx.strokeRect(r.x*overlay.width,r.y*overlay.height,r.w*overlay.width,r.h*overlay.height);ctx.fillStyle=palette[key];ctx.font='bold 18px Arial';ctx.fillText(key==='seconds'?'Clock':key==='period'?'Quarter':key==='homeScore'?'Left score':key==='awayScore'?'Right score':key==='homeFouls'?'Left fouls':key==='awayFouls'?'Right fouls':key==='homeTimeouts'?'Left timeouts':'Right timeouts',r.x*overlay.width+4,Math.max(20,r.y*overlay.height-6))}}
 overlay.addEventListener('pointerdown',event=>{if(!selected||!stream)return;invalidate();overlay.setPointerCapture(event.pointerId);drag={start:point(event),end:point(event)};renderBoxes()});
 overlay.addEventListener('pointermove',event=>{if(drag){drag.end=point(event);renderBoxes()}});
 overlay.addEventListener('pointerup',event=>{if(!drag)return;drag.end=point(event);const r={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};if(r.w>.008&&r.h>.008){config.regions[selected]=r;store();status('Area saved. Select the next area or click Test reading.')}drag=null;renderBoxes();buttons()});
@@ -320,10 +320,28 @@ function stable(key,value,time,confidence=0){
  return count>=minCount&&time-streakStart>=minDuration;
 }
 function readState(){try{return {homeScore:0,awayScore:0,seconds:480,period:1,running:false,...JSON.parse(localStorage.getItem('htv-score')||'{}')}}catch(e){return {homeScore:0,awayScore:0,seconds:480,period:1,running:false}}}
+// Live timeout counters are independent from the camera-driven score/clock object.
+function readTimeoutState(){
+ let t={};try{t=JSON.parse(localStorage.getItem('htv-timeouts')||'{}')||{}}catch(e){}
+ const clamp=side=>{
+  const n=Number(t[side]);
+  return t[side]!==undefined&&Number.isFinite(n)?Math.max(0,Math.min(5,Math.trunc(n))):5;
+ };
+ return {home:clamp('home'),away:clamp('away')};
+}
+function drawLiveTimeouts(){
+ const t=readTimeoutState();
+ const home=byId('homeTimeoutsLive'),away=byId('awayTimeoutsLive');
+ if(home)home.textContent=t.home;
+ if(away)away.textContent=t.away;
+}
+window.addEventListener('storage',e=>{if(e.key==='htv-timeouts')drawLiveTimeouts()});
+window.addEventListener('htv-sync-updated',e=>{if(e.detail?.kind==='timeouts')drawLiveTimeouts()});
+drawLiveTimeouts();
 function apply(result,automatic){
- const state=readState(),time=Date.now();
+ const state=readState(),timeoutState=readTimeoutState(),time=Date.now();
  // Do not rewrite the running clock's timestamp for each camera frame.
- let changed=false;
+ let changed=false,timeoutChanged=false;
  for(const key of activeKeys()){
   const reading=result[key],value=reading?.value??null;if(value===null)continue;
   const sampleTime=reading.sampledAt??time;
@@ -335,14 +353,25 @@ function apply(result,automatic){
   confirmed[key]={value,time:sampleTime,changedAt};
   // Camera decoding and confirmation above are unchanged. The smoother
   // translates confirmed clock readings into a steady running/stopped timer.
-  if(key==='seconds'&&window.htvSmoothClock){
+  if(key==='homeTimeouts'||key==='awayTimeouts'){
+    // This is an opt-in NUMBER reader only (0–5); physical timeout lamps
+    // require their own detector and cannot be read as a digit.
+    const side=key==='homeTimeouts'?'home':'away';
+    if(value>=0&&value<=5&&timeoutState[side]!==value){timeoutState[side]=value;timeoutChanged=true}
+  }else if(key==='seconds'&&window.htvSmoothClock){
    if(window.htvSmoothClock.observe(state,value,sampleTime,time,automatic))changed=true;
   }else if(state[key]!==value){state[key]=value;changed=true}
  }
  // Unchanged samples need no storage write or overlay redraw.
  if(changed){if(!Number.isFinite(state.stamp))state.stamp=time;localStorage.setItem('htv-score',JSON.stringify(state));window.htvSync?.publishScore();status('Updated overlay at '+new Date().toLocaleTimeString())}
+ if(timeoutChanged){
+  localStorage.setItem('htv-timeouts',JSON.stringify(timeoutState));
+  window.htvSync?.publishTimeouts();
+  drawLiveTimeouts();
+  status('Updated timeout counts at '+new Date().toLocaleTimeString());
+ }
  for(const key of activeKeys())if(confirmed[key]&&result[key]?.value!=null&&confirmed[key].value===result[key].value)byId(key+'Note').textContent='Confirmed on overlay · '+format(key,confirmed[key].value);
- return changed;
+ return changed||timeoutChanged;
 }
 async function test(){if(busy)return;busy=true;buttons();const token=generation;try{const result=await scan();if(token!==generation)return;lastTest=result;verified=activeKeys().some(k=>result[k].value!==null);const complete=activeKeys().every(k=>result[k].value!==null);status(verified?(complete?'Check these numbers against the gym scoreboard. If correct, start automatic updates.':'Clear fields are ready. Start automatic updates to update those fields while retrying the others.'):'No clear fields yet. Check the crop previews and test again.')}catch(e){verified=false;status(e.message)}finally{busy=false;buttons()}}
 async function start(){
@@ -366,10 +395,10 @@ async function start(){
 }
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
-for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled','foulsEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
+for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled','foulsEnabled','timeoutsEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled'||key==='timeoutsEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled'||key==='timeoutsEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v13 · team fouls + seven-digit fix + smooth clock';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v14 · optional numeric timeouts · score/clock OCR unchanged';
 buttons();
 
 
