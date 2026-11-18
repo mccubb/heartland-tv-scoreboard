@@ -4,11 +4,12 @@
   "use strict";
   const BROKER = "wss://broker.emqx.io:8084/mqtt";
   const PREFIX = "heartland-tv/live-36d63c35f15f37a9ecae11e9d34c95b0cfa8cfa9/v1/";
-  const KEYS = { score: "htv-score", branding: "htv-branding", display: "htv-display" };
+  const KEYS = { score: "htv-score", branding: "htv-branding", display: "htv-display", timeouts: "htv-timeouts" };
   const TOPICS = {
     score: PREFIX + "score",
     branding: PREFIX + "branding",
     display: PREFIX + "display",
+    timeouts: PREFIX + "timeouts",
     logoHome: PREFIX + "logo-home",
     logoAway: PREFIX + "logo-away"
   };
@@ -17,7 +18,7 @@
   const instance = "htv-" + Math.random().toString(36).slice(2, 12);
   const isOverlay = !!document.getElementById("bug");
   const isController = !!document.getElementById("scoreboardSize");
-  const latest = { score: 0, branding: 0, display: 0, logoHome: 0, logoAway: 0 };
+  const latest = { score: 0, branding: 0, display: 0, timeouts: 0, logoHome: 0, logoAway: 0 };
   const lastLogoSource = { home: null, away: null };
   const logoGeneration = { home: 0, away: 0 };
   const pending = {};
@@ -70,6 +71,10 @@
     }
     if (kind === "display") {
       return Number.isFinite(state.scale) && state.scale >= .7 && state.scale <= 2.5;
+    }
+    if (kind === "timeouts") {
+      return Number.isInteger(state.home) && state.home >= 0 && state.home <= 5 &&
+        Number.isInteger(state.away) && state.away >= 0 && state.away <= 5;
     }
     return !!state.home && !!state.away &&
       typeof state.home === "object" && typeof state.away === "object";
@@ -190,11 +195,13 @@
     publishBrand: publishBrand,
     publishLogoChange: publishLogoChange,
     publishDisplay: function () { publish("display"); },
+    publishTimeouts: function () { publish("timeouts"); },
     publishAll: function () {
       publish("score");
       publishBrand();
       publishSavedLogos();
       publish("display");
+      publish("timeouts");
     },
     isConnected: function () { return connected; }
   };
@@ -234,7 +241,8 @@
       if (packet.to === instance && sent[packet.kind] &&
           packet.sentAt >= sent[packet.kind]) {
         receivers.set(packet.from, Date.now());
-        lastAcknowledged = packet.kind === "display" ? "size" :
+        lastAcknowledged = packet.kind === "timeouts" ? "timeouts" :
+          packet.kind === "display" ? "size" :
           packet.kind === "branding" ? "team settings" :
           packet.kind === "logoHome" || packet.kind === "logoAway" ? "team logo" : "score";
         lastAcknowledgedAt = Date.now();
@@ -245,6 +253,7 @@
     const kind = topic === TOPICS.score ? "score" :
       topic === TOPICS.branding ? "branding" :
       topic === TOPICS.display ? "display" :
+      topic === TOPICS.timeouts ? "timeouts" :
       topic === TOPICS.logoHome ? "logoHome" :
       topic === TOPICS.logoAway ? "logoAway" : null;
     if (!kind || !Number.isFinite(packet.sentAt)) return;
@@ -342,6 +351,7 @@
       if (isController) {
         if (valid("branding", getJSON(KEYS.branding))) { publishBrand(); publishSavedLogos(); }
         if (valid("display", getJSON(KEYS.display))) publish("display");
+        if (valid("timeouts", getJSON(KEYS.timeouts))) publish("timeouts");
       }
       const subscriptions = Object.values(TOPICS).concat([PRESENCE_TOPIC, ACK_TOPIC]);
       client.subscribe(subscriptions, { qos: 1 }, function (error) {
