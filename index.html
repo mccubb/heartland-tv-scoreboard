@@ -37,7 +37,7 @@
 <div class="team away"><div class="score" id="awayScore"><span class="score-old"></span><span class="score-current">0</span><span class="tear-curtain"></span><span class="score-flash awayflash"><span class="phmark">P</span></span></div><div class="info"><div class="top"><span class="seed" id="awayRanking">5</span><span class="name" id="awayName">PLAZA HEIGHTS</span></div><div class="record" id="awayRecord">7-4</div><div class="fouls" id="awayFouls">FOULS: 0</div></div></div>
 </div></div>
 <script>
-const brandDefaults={home:{background:'#0A0674',text:'#FFFFFF',panel:'#FFFFFF',swoosh:'#000000',record:'10-2',ranking:'1',logo:''},away:{background:'#F4F5F4',text:'#8B2635',panel:'#8B2635',swoosh:'#000000',record:'7-4',ranking:'5',logo:''}};
+const brandDefaults={home:{background:'#0A0674',text:'#FFFFFF',panel:'#FFFFFF',swoosh:'#000000',record:'10-2',ranking:'1',logo:'',logoScale:100},away:{background:'#F4F5F4',text:'#8B2635',panel:'#8B2635',swoosh:'#000000',record:'7-4',ranking:'5',logo:'',logoScale:100}};
 function readBrand(){let stored={};try{stored=JSON.parse(localStorage.getItem('htv-branding')||'{}')}catch(e){}const b={};for(const side of ['home','away']){b[side]={...brandDefaults[side],...stored[side]};for(const k of ['background','text','panel','swoosh'])if(!/^#[0-9a-f]{6}$/i.test(b[side][k]))b[side][k]=brandDefaults[side][k];if(!/^data:image\/(png|jpeg|webp);base64,/.test(b[side].logo||''))b[side].logo=''}return b}
 
 const defaults={homeName:"HEARTLAND",awayName:"PLAZA HEIGHTS",homeScore:0,awayScore:0,homeFouls:0,awayFouls:0,period:1,seconds:480,running:false,stamp:Date.now()};
@@ -106,7 +106,15 @@ async function setScore(el,val,force=false){
  // Rasterize the exact emblem once, then give its face a slight tilt and a short extrusion.
  const face=document.createElement('canvas');face.width=canvas.width;face.height=canvas.height;
  const fc=face.getContext('2d');fc.scale(dpr,dpr);
- if(logo){const scale=Math.min(w*.98/logo.naturalWidth,h*.98/logo.naturalHeight);const lw=logo.naturalWidth*scale,lh=logo.naturalHeight*scale;fc.drawImage(logo,(w-lw)/2,(h-lh)/2,lw,lh)}
+ if(logo){
+    // The operator controls only the uploaded score-flash emblem size.
+    // Keep the panel, swoosh, score font, animation and overall scoreboard unchanged.
+    const requested=Number(brand.logoScale);
+    const logoMultiplier=Number.isFinite(requested)?Math.max(.5,Math.min(1.5,requested/100)):1;
+    const fit=Math.min(w*.98/logo.naturalWidth,h*.98/logo.naturalHeight);
+    const lw=logo.naturalWidth*fit*logoMultiplier,lh=logo.naturalHeight*fit*logoMultiplier;
+    fc.drawImage(logo,(w-lw)/2,(h-lh)/2,lw,lh);
+  }
  else{fc.fillStyle='#FFFFFF';fc.font='900 '+Math.round(h*.68)+'px Arial';fc.textAlign='center';fc.textBaseline='middle';fc.fillText((read()[side+'Name']||'P').trim().charAt(0).toUpperCase(),w/2,h/2+2)}
  const depth=document.createElement('canvas');depth.width=canvas.width;depth.height=canvas.height;
  const dc=depth.getContext('2d');dc.drawImage(face,0,0);dc.globalCompositeOperation='source-in';dc.fillStyle=home?'#333542':'#242029';dc.fillRect(0,0,depth.width,depth.height);
