@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Heartland Basketball Scoreboard</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@800&amp;display=swap">
 <style>
 :root{--heartland:#0A0674;--plaza:#8B2635;--black:#151719;--white:#F4F5F4}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:Arial,Helvetica,sans-serif}
@@ -13,8 +13,8 @@
 .record{font-size:15px;font-weight:800;margin-top:5px;opacity:.96}
  /* Thick, compact broadcast lettering inspired by the supplied ESPN scorebug.
     Archivo Black is a licensed, web-safe visual substitute for ESPN's proprietary type. */
- #bug .seed,#bug .name,#bug .record,#bug .fouls,#bug .period{font-family:'Archivo Black','Arial Black',Arial,sans-serif;font-weight:900}
- #bug .name{letter-spacing:-.2px}
+ #bug .seed,#bug .name,#bug .record,#bug .fouls,#bug .period{font-family:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif;font-weight:800}
+ #bug .name{letter-spacing:.15px;transform:scaleX(1.06);transform-origin:center}
 .timeout-track{position:absolute;top:5px;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:1;pointer-events:none}
 .home .timeout-track{right:6px}
 .away .timeout-track{left:6px}
@@ -236,7 +236,7 @@ function draw(){
    const max=narrow?18:22,info=name.closest('.info'),rank=info.querySelector('.seed');
    const padding=narrow?35:46;
    const allowed=Math.max(72,info.clientWidth-padding-(rank.hidden?0:rank.offsetWidth+9)-8);
-   name.style.fontSize=Math.min(max,Math.max(10,allowed/Math.max(1,name.textContent.length*.74)))+'px';
+   name.style.fontSize=Math.min(max,Math.max(10,allowed/Math.max(1,name.textContent.length*.69)))+'px';
   }
  }
  setScore(homeScore,state.homeScore);
