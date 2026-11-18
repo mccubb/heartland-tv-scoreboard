@@ -1,21 +1,21 @@
 'use strict';
-const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','seconds','period'];
-let config={regions:{},reader:'segments',polarity:'light',confidence:70,clockEnabled:false,quarterEnabled:false,device:''};
+const byId=id=>document.getElementById(id),keys=['homeScore','awayScore','seconds','period','homeFouls','awayFouls'];
+let config={regions:{},reader:'segments',polarity:'light',confidence:70,clockEnabled:false,quarterEnabled:false,foulsEnabled:false,device:''};
 try{const c=JSON.parse(localStorage.getItem('htv-camera')||'{}');config={...config,...c,regions:c.regions||{}}}catch(e){}
 let stream=null,worker=null,loading=null,busy=false,running=false,generation=0,selected=null,drag=null,lastTest=null,verified=false;
 let candidates={},confirmed={};const video=byId('video'),overlay=byId('overlay'),ctx=overlay.getContext('2d');
-const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a',period:'#d7a9ff'};
+const palette={homeScore:'#36d0ff',awayScore:'#ffb63b',seconds:'#70ed9a',period:'#d7a9ff',homeFouls:'#ffd86d',awayFouls:'#f19edc'};
 function status(text){byId('status').textContent=text}
 function store(){localStorage.setItem('htv-camera',JSON.stringify(config))}
-function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key==='period'){const ot=clean.match(/^OT([1-5])$/i);if(ot)return Number(ot[1])+4}if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
+function parseReading(key,text){const clean=String(text).replace(/\s/g,'');if(key==='period'){const ot=clean.match(/^OT([1-5])$/i);if(ot)return Number(ot[1])+4}if(key!=='seconds'){if(!/^\d{1,3}$/.test(clean))return null;const n=Number(clean);return key==='period'?(n>=1&&n<=9?n:null):key==='homeFouls'||key==='awayFouls'?(n<=99?n:null):(n<=199?n:null)}const m=clean.match(/^(\d{1,2}):(\d{2})$/);if(m)return Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;const seconds=clean.match(/^(\d{1,2})(?:\.\d{0,2})?$/);return seconds&&Number(seconds[1])<60?Number(seconds[1]):null}
 function format(key,value){return value===null?'—':key==='seconds'?Math.floor(value/60)+':'+String(value%60).padStart(2,'0'):key==='period'&&value>4?'OT'+(value-4):String(value)}
-function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[])]}
+function activeKeys(){return ['homeScore','awayScore',...(config.clockEnabled?['seconds']:[]),...(config.quarterEnabled&&byId('periodCrop')?['period']:[]),...(config.foulsEnabled&&byId('homeFoulsCrop')&&byId('awayFoulsCrop')?['homeFouls','awayFouls']:[])]}
 function ready(){return stream&&video.readyState>=2&&activeKeys().every(k=>config.regions[k])}
 function buttons(){byId('test').disabled=!ready()||busy||running;byId('start').disabled=!ready()||busy||running||!verified;byId('pause').disabled=!running;byId('apply').disabled=running||busy||!lastTest||!activeKeys().some(k=>lastTest[k]?.value!=null);byId('disconnect').disabled=!stream;byId('connect').disabled=busy||running}
 function pause(message='Automatic updates paused.'){if(running&&config.clockEnabled)window.htvSmoothClock?.stopReader();running=false;generation++;candidates={};buttons();status(message)}
 function invalidate(){pause('Reading areas changed. Test the readings before starting.');verified=false;lastTest=null;buttons()}
 function point(event){const b=overlay.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(event.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(event.clientY-b.top)/b.height))}}
-function renderBoxes(){if(!video.videoWidth)return;overlay.width=video.videoWidth;overlay.height=video.videoHeight;ctx.clearRect(0,0,overlay.width,overlay.height);const regions={...config.regions};if(drag)regions[selected]={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};for(const [key,r] of Object.entries(regions)){if(!keys.includes(key))continue;ctx.strokeStyle=palette[key];ctx.lineWidth=3;ctx.strokeRect(r.x*overlay.width,r.y*overlay.height,r.w*overlay.width,r.h*overlay.height);ctx.fillStyle=palette[key];ctx.font='bold 18px Arial';ctx.fillText(key==='seconds'?'Clock':key==='period'?'Quarter':key==='homeScore'?'Left score':'Right score',r.x*overlay.width+4,Math.max(20,r.y*overlay.height-6))}}
+function renderBoxes(){if(!video.videoWidth)return;overlay.width=video.videoWidth;overlay.height=video.videoHeight;ctx.clearRect(0,0,overlay.width,overlay.height);const regions={...config.regions};if(drag)regions[selected]={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};for(const [key,r] of Object.entries(regions)){if(!keys.includes(key))continue;ctx.strokeStyle=palette[key];ctx.lineWidth=3;ctx.strokeRect(r.x*overlay.width,r.y*overlay.height,r.w*overlay.width,r.h*overlay.height);ctx.fillStyle=palette[key];ctx.font='bold 18px Arial';ctx.fillText(key==='seconds'?'Clock':key==='period'?'Quarter':key==='homeScore'?'Left score':key==='awayScore'?'Right score':key==='homeFouls'?'Left fouls':'Right fouls',r.x*overlay.width+4,Math.max(20,r.y*overlay.height-6))}}
 overlay.addEventListener('pointerdown',event=>{if(!selected||!stream)return;invalidate();overlay.setPointerCapture(event.pointerId);drag={start:point(event),end:point(event)};renderBoxes()});
 overlay.addEventListener('pointermove',event=>{if(drag){drag.end=point(event);renderBoxes()}});
 overlay.addEventListener('pointerup',event=>{if(!drag)return;drag.end=point(event);const r={x:Math.min(drag.start.x,drag.end.x),y:Math.min(drag.start.y,drag.end.y),w:Math.abs(drag.end.x-drag.start.x),h:Math.abs(drag.end.y-drag.start.y)};if(r.w>.008&&r.h>.008){config.regions[selected]=r;store();status('Area saved. Select the next area or click Test reading.')}drag=null;renderBoxes();buttons()});
@@ -185,7 +185,7 @@ function readSevenSegmentPass(image,key,limit,prepared=segmentPixels(image)){
  if(key==='seconds'?(colons===1?(digits<3||digits>4):(colons!==0||digits<1||digits>2)):(colons||digits<1||digits>3))return null;
  // A single-number score often consists of disconnected LED strokes.
  // Two skinny vertical slices are not reliable evidence of an 11.
- if(key==='homeScore'||key==='awayScore'){
+ if(key==='homeScore'||key==='awayScore'||key==='homeFouls'||key==='awayFouls'){
   if(digits>1&&runs.length===digits){
    const skinny=runs.filter(r=>{
     let minY=h,maxY=-1;for(let y=top;y<=bottom;y++)for(let x=r.left;x<=r.right;x++)if(ink[y*w+x]){minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
@@ -366,10 +366,10 @@ async function start(){
 }
 byId('connect').onclick=connect;byId('disconnect').onclick=()=>disconnect();byId('test').onclick=test;byId('start').onclick=start;byId('pause').onclick=()=>pause();byId('apply').onclick=()=>{if(lastTest&&!running)apply(lastTest,false)};
 byId('clear').onclick=()=>{invalidate();config.regions={};store();renderBoxes();buttons()};
-for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
+for(const key of ['reader','polarity','confidence','clockEnabled','quarterEnabled','foulsEnabled']){const input=byId(key);if(!input)continue;if(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled')input.checked=config[key];else input.value=config[key];input.onchange=()=>{invalidate();config[key]=(key==='clockEnabled'||key==='quarterEnabled'||key==='foulsEnabled')?input.checked:key==='confidence'?Number(input.value):input.value;store();buttons()}}
 byId('device').onchange=()=>{config.regions={};invalidate();if(stream)disconnect('Camera changed. Click Start camera and mark the new picture.');store()};
 window.addEventListener('beforeunload',()=>{running=false;if(stream)stream.getTracks().forEach(t=>t.stop());if(worker)worker.terminate();for(const entry of decoderWorkers.values())entry.worker.terminate()});
-const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v12 · seven-digit fix + smooth clock';
+const versionLabel=byId('readerVersion');if(versionLabel)versionLabel.textContent='Reader v13 · team fouls + seven-digit fix + smooth clock';
 buttons();
 
 
