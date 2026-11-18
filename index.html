@@ -69,7 +69,8 @@ function renderTimeoutDots(el,remaining){
  const nodes=[];
  for(let i=0;i<5;i++){
    const dot=document.createElement('span');
-   dot.className='timeout-dot '+(i<count?'remaining':'used');
+   // Fill remaining timeouts from the bottom, so the top dot fades first.
+   dot.className='timeout-dot '+(i>=5-count?'remaining':'used');
    nodes.push(dot);
  }
  el.replaceChildren(...nodes);
